@@ -9,12 +9,14 @@ interface HeaderProps {
   title?: string;
   showBackButton?: boolean;
   onBackPress?: () => void;
+  compact?: boolean;
 }
 
 export const Header: React.FC<HeaderProps> = ({
   title = 'Home',
   showBackButton = false,
   onBackPress,
+  compact = false,
 }) => {
   const { colors, isDark } = useTheme();
   const { user } = useAuthStore();
@@ -28,7 +30,12 @@ export const Header: React.FC<HeaderProps> = ({
           tint={isDark ? 'dark' : 'light'}
           style={styles.blurContainer}
         >
-          <View style={[styles.content, { backgroundColor: colors.glassBackground }]}>
+          <View style={[
+            styles.content,
+            { backgroundColor: colors.glassBackground },
+            compact && styles.compactContent
+          ]}>
+
             {/* Left Side - Menu Button */}
             <TouchableOpacity
               style={[styles.iconButton, { backgroundColor: colors.glassBackgroundLight }]}
@@ -86,6 +93,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 50,
     paddingBottom: 12,
+  },
+  compactContent: {
+    paddingTop: 16,
   },
   iconButton: {
     width: 44,

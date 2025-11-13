@@ -60,11 +60,13 @@ export const Sidebar: React.FC<SidebarProps> = ({ visible, onClose }) => {
     }, 300);
   };
 
+  const isSeller = user?.roles?.includes('SELLER' as any);
+
   const menuItems = [
     { label: 'Home', icon: '🏠', route: '/(tabs)' },
-    { label: 'Settings', icon: '⚙️', route: '/(tabs)/explore' },
-    { label: 'Profile', icon: '👤', route: '/(tabs)' },
-    { label: 'Notifications', icon: '🔔', route: '/(tabs)' },
+    { label: 'My Deals', icon: '💼', route: '/(tabs)/explore', showForSeller: true },
+    { label: 'Profile', icon: '👤', route: '/(tabs)/profile' },
+    { label: 'Edit Profile', icon: '✏️', route: '/(tabs)/edit-profile' },
   ];
 
   return (
@@ -98,35 +100,53 @@ export const Sidebar: React.FC<SidebarProps> = ({ visible, onClose }) => {
               <View style={[styles.profileSection, { borderBottomColor: colors.border }]}>
                 <View style={[styles.avatar, { backgroundColor: colors.primary }]}>
                   <Text style={styles.avatarText}>
-                    {user?.firstName?.[0]?.toUpperCase() || 'U'}
+                    {user?.displayName?.[0]?.toUpperCase() || 'U'}
                   </Text>
                 </View>
                 <Text style={[styles.userName, { color: colors.text }]}>
-                  {user?.firstName} {user?.lastName}
+                  {user?.displayName || 'User'}
                 </Text>
                 <Text style={[styles.userEmail, { color: colors.textSecondary }]}>
-                  {user?.email}
+                  {user?.email || user?.phoneE164 || ''}
                 </Text>
               </View>
 
               {/* Menu Items */}
               <View style={styles.menuSection}>
-                {menuItems.map((item, index) => (
+                {/* Create Deal Button for Sellers */}
+                {isSeller && (
                   <TouchableOpacity
-                    key={index}
                     style={[
-                      styles.menuItem,
-                      { backgroundColor: colors.glassBackgroundLight },
+                      styles.createDealButton,
+                      { backgroundColor: colors.primary },
                     ]}
-                    onPress={() => handleNavigation(item.route)}
+                    onPress={() => handleNavigation('/deals/create')}
                     activeOpacity={0.7}
                   >
-                    <Text style={styles.menuIcon}>{item.icon}</Text>
-                    <Text style={[styles.menuLabel, { color: colors.text }]}>
-                      {item.label}
-                    </Text>
+                    <Text style={styles.createDealIcon}>➕</Text>
+                    <Text style={styles.createDealText}>Create Deal</Text>
                   </TouchableOpacity>
-                ))}
+                )}
+
+                {/* Regular Menu Items */}
+                {menuItems
+                  .filter((item: any) => !item.showForSeller || isSeller)
+                  .map((item, index) => (
+                    <TouchableOpacity
+                      key={index}
+                      style={[
+                        styles.menuItem,
+                        { backgroundColor: colors.glassBackgroundLight },
+                      ]}
+                      onPress={() => handleNavigation(item.route)}
+                      activeOpacity={0.7}
+                    >
+                      <Text style={styles.menuIcon}>{item.icon}</Text>
+                      <Text style={[styles.menuLabel, { color: colors.text }]}>
+                        {item.label}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
               </View>
 
               {/* Logout Button */}
@@ -216,6 +236,29 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingTop: 16,
     paddingHorizontal: 16,
+  },
+  createDealButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    marginBottom: 16,
+    borderRadius: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  createDealIcon: {
+    fontSize: 20,
+    marginRight: 12,
+  },
+  createDealText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#FFFFFF',
   },
   menuItem: {
     flexDirection: 'row',

@@ -139,10 +139,28 @@ export const ProfileScreen: React.FC = () => {
 
             {/* Rating */}
             {user.ratingAvg !== undefined && user.ratingCount !== undefined && (
-              <View style={styles.ratingContainer}>
-                <Ionicons name="star" size={20} color={colors.accent} />
+              <View
+                style={[
+                  styles.ratingContainer,
+                  {
+                    backgroundColor: colors.glassBackgroundLight,
+                    borderColor: colors.glassBorder,
+                  },
+                ]}
+              >
+                {/* Render Stars */}
+                <View style={styles.starsRow}>
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <Ionicons
+                      key={star}
+                      name={star <= Math.round(user.ratingAvg || 0) ? 'star' : 'star-outline'}
+                      size={18}
+                      color={star <= Math.round(user.ratingAvg || 0) ? colors.warning : colors.textTertiary}
+                    />
+                  ))}
+                </View>
                 <Text style={[styles.ratingText, { color: colors.text }]}>
-                  {user.ratingAvg.toFixed(1)} ({user.ratingCount} reviews)
+                  {user.ratingAvg.toFixed(1)} ({user.ratingCount} {user.ratingCount === 1 ? 'review' : 'reviews'})
                 </Text>
               </View>
             )}
@@ -414,11 +432,12 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    padding: responsive.spacing.lg,
+    paddingHorizontal: responsive.spacing.lg,
+    paddingTop: 20,
     paddingBottom: 120,
   },
   header: {
-    marginBottom: responsive.spacing.lg,
+    marginBottom: responsive.spacing.md,
     alignItems: 'center',
   },
   title: {
@@ -487,13 +506,22 @@ const styles = StyleSheet.create({
     marginLeft: responsive.spacing.sm,
   },
   ratingContainer: {
+    flexDirection: 'column',
+    alignItems: 'center',
+    marginBottom: responsive.spacing.md,
+    paddingHorizontal: responsive.spacing.lg,
+    paddingVertical: responsive.spacing.md,
+    borderRadius: responsive.borderRadius.lg,
+    borderWidth: 1,
+  },
+  starsRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: responsive.spacing.sm,
+    gap: 4,
+    marginBottom: 6,
   },
   ratingText: {
-    fontSize: responsive.fontSize.base,
-    marginLeft: responsive.spacing.sm,
+    fontSize: responsive.fontSize.sm,
     fontWeight: '600',
   },
   rolesContainer: {

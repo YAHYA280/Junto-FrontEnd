@@ -11,6 +11,7 @@ import {
   Image,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import { useTheme } from '../../contexts/ThemeContext';
 import { Card, Header, AnimatedView } from '../../components/ui';
 import { useAuthStore } from '../../store/authStore';
@@ -22,6 +23,7 @@ type ViewMode = 'list' | 'grid';
 
 export const HomeScreen: React.FC = () => {
   const { colors } = useTheme();
+  const router = useRouter();
   const { user } = useAuthStore();
 
   const [deals, setDeals] = useState<HotDeal[]>([]);
@@ -32,6 +34,8 @@ export const HomeScreen: React.FC = () => {
   const [skip, setSkip] = useState(0);
   const [hasMore, setHasMore] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const isSeller = user?.roles?.includes('SELLER' as any);
 
   const TAKE = 20;
 
@@ -119,7 +123,7 @@ export const HomeScreen: React.FC = () => {
           <TouchableOpacity
             style={styles.gridCard}
             activeOpacity={0.7}
-            onPress={() => console.log('[HomeScreen] Deal clicked:', item.id)}
+            onPress={() => router.push(`/deals/${item.id}`)}
           >
             <Card variant="elevated" style={styles.gridCardInner}>
               {/* Discount Badge */}
@@ -191,7 +195,7 @@ export const HomeScreen: React.FC = () => {
       <AnimatedView animation="slideUp" delay={index * 50} duration={400}>
         <TouchableOpacity
           activeOpacity={0.7}
-          onPress={() => console.log('[HomeScreen] Deal clicked:', item.id)}
+          onPress={() => router.push(`/deals/${item.id}`)}
         >
           <Card variant="elevated" style={styles.listCard}>
             <View style={styles.listContent}>
@@ -369,123 +373,32 @@ export const HomeScreen: React.FC = () => {
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <Header title="Junto Go" />
 
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
+      <FlatList
+        data={deals}
+        renderItem={renderDealCard}
+        keyExtractor={(item) => item.id}
+        ListHeaderComponent={renderHeader}
+        ListEmptyComponent={renderEmpty}
+        ListFooterComponent={renderFooter}
+        contentContainerStyle={[
+          styles.flatListContent,
+          deals.length === 0 && styles.emptyFlatListContent,
+        ]}
+        key={viewMode}
+        numColumns={viewMode === 'grid' ? 2 : 1}
+        columnWrapperStyle={viewMode === 'grid' ? styles.gridRow : undefined}
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefreshing}
+            onRefresh={handleRefresh}
+            tintColor={colors.primary}
+            colors={[colors.primary]}
+          />
+        }
+        onEndReached={handleLoadMore}
+        onEndReachedThreshold={0.5}
         showsVerticalScrollIndicator={false}
-      >
-        {/* Welcome Section */}
-        <View style={styles.welcomeSection}>
-          <Text style={[styles.greeting, { color: colors.textSecondary }]}>
-            Welcome back,
-          </Text>
-          <Text style={[styles.userName, { color: colors.text }]}>
-            {user?.firstName}! 👋
-          </Text>
-        </View>
-
-        {/* Stats Cards */}
-        <View style={styles.statsContainer}>
-          <Card variant="elevated" style={styles.statCard}>
-            <Text style={[styles.statValue, { color: colors.primary }]}>24</Text>
-            <Text style={[styles.statLabel, { color: colors.textSecondary }]}>
-              Total Events
-            </Text>
-          </Card>
-
-          <Card variant="elevated" style={styles.statCard}>
-            <Text style={[styles.statValue, { color: colors.accent }]}>12</Text>
-            <Text style={[styles.statLabel, { color: colors.textSecondary }]}>
-              Upcoming
-            </Text>
-          </Card>
-        </View>
-
-        {/* Recent Activity Card */}
-        <Card variant="elevated" style={styles.sectionCard}>
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>
-            Recent Activity
-          </Text>
-
-          <View style={styles.activityItem}>
-            <View style={[styles.activityIcon, { backgroundColor: colors.primary + '22' }]}>
-              <Text style={styles.activityEmoji}>🎉</Text>
-            </View>
-            <View style={styles.activityContent}>
-              <Text style={[styles.activityTitle, { color: colors.text }]}>
-                New Event Created
-              </Text>
-              <Text style={[styles.activityTime, { color: colors.textTertiary }]}>
-                2 hours ago
-              </Text>
-            </View>
-          </View>
-
-          <View style={styles.activityItem}>
-            <View style={[styles.activityIcon, { backgroundColor: colors.success + '22' }]}>
-              <Text style={styles.activityEmoji}>✅</Text>
-            </View>
-            <View style={styles.activityContent}>
-              <Text style={[styles.activityTitle, { color: colors.text }]}>
-                Event Completed
-              </Text>
-              <Text style={[styles.activityTime, { color: colors.textTertiary }]}>
-                5 hours ago
-              </Text>
-            </View>
-          </View>
-
-          <View style={styles.activityItem}>
-            <View style={[styles.activityIcon, { backgroundColor: colors.info + '22' }]}>
-              <Text style={styles.activityEmoji}>📢</Text>
-            </View>
-            <View style={styles.activityContent}>
-              <Text style={[styles.activityTitle, { color: colors.text }]}>
-                New Announcement
-              </Text>
-              <Text style={[styles.activityTime, { color: colors.textTertiary }]}>
-                1 day ago
-              </Text>
-            </View>
-          </View>
-        </Card>
-
-        {/* Quick Actions Card */}
-        <Card variant="elevated" style={styles.sectionCard}>
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>
-            Quick Actions
-          </Text>
-
-          <View style={styles.quickActionsGrid}>
-            <View style={[styles.quickAction, { backgroundColor: colors.primary + '22' }]}>
-              <Text style={styles.quickActionIcon}>➕</Text>
-              <Text style={[styles.quickActionLabel, { color: colors.text }]}>
-                Create Event
-              </Text>
-            </View>
-
-            <View style={[styles.quickAction, { backgroundColor: colors.accent + '22' }]}>
-              <Text style={styles.quickActionIcon}>📅</Text>
-              <Text style={[styles.quickActionLabel, { color: colors.text }]}>
-                View Calendar
-              </Text>
-            </View>
-
-            <View style={[styles.quickAction, { backgroundColor: colors.success + '22' }]}>
-              <Text style={styles.quickActionIcon}>👥</Text>
-              <Text style={[styles.quickActionLabel, { color: colors.text }]}>
-                Invite Friends
-              </Text>
-            </View>
-
-            <View style={[styles.quickAction, { backgroundColor: colors.info + '22' }]}>
-              <Text style={styles.quickActionIcon}>📊</Text>
-              <Text style={[styles.quickActionLabel, { color: colors.text }]}>
-                View Stats
-              </Text>
-            </View>
-          </View>
-        </Card>
-      </ScrollView>
+      />
     </View>
   );
 };
@@ -494,93 +407,209 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  scrollContent: {
+  flatListContent: {
     padding: 16,
+    paddingBottom: 100,
+  },
+  emptyFlatListContent: {
+    flexGrow: 1,
+  },
+  gridRow: {
+    justifyContent: 'space-between',
+  },
+  headerContainer: {
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 8,
   },
   welcomeSection: {
-    marginBottom: 24,
+    marginBottom: 16,
   },
   greeting: {
     fontSize: 16,
     marginBottom: 4,
   },
   userName: {
-    fontSize: 32,
+    fontSize: 28,
     fontWeight: 'bold',
   },
-  statsContainer: {
+  controls: {
     flexDirection: 'row',
-    gap: 12,
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  dealsCount: {
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  viewToggle: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  gridItemWrapper: {
+    width: '48%',
     marginBottom: 16,
   },
-  statCard: {
-    flex: 1,
-    alignItems: 'center',
-    padding: 20,
+  gridCard: {
+    width: '100%',
   },
-  statValue: {
-    fontSize: 36,
-    fontWeight: 'bold',
+  gridCardInner: {
+    padding: 12,
+  },
+  gridImage: {
+    width: '100%',
+    height: 120,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  gridInfo: {
+    width: '100%',
+  },
+  gridTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    marginBottom: 8,
+    minHeight: 40,
+  },
+  gridPrices: {
     marginBottom: 8,
   },
-  statLabel: {
-    fontSize: 14,
+  gridOriginalPrice: {
+    fontSize: 12,
+    textDecorationLine: 'line-through',
+    marginBottom: 4,
   },
-  sectionCard: {
-    marginBottom: 16,
+  gridDealPrice: {
+    fontSize: 18,
+    fontWeight: 'bold',
   },
-  sectionTitle: {
-    fontSize: 20,
-    fontWeight: '600',
-    marginBottom: 16,
+  gridMerchant: {
+    fontSize: 12,
   },
-  activityItem: {
+  listCard: {
+    marginBottom: 12,
+  },
+  listContent: {
     flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 16,
+    padding: 12,
   },
-  activityIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+  listImage: {
+    width: 100,
+    height: 100,
+    borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
   },
-  activityEmoji: {
-    fontSize: 24,
-  },
-  activityContent: {
+  listInfo: {
     flex: 1,
   },
-  activityTitle: {
-    fontSize: 16,
-    fontWeight: '500',
-    marginBottom: 4,
-  },
-  activityTime: {
-    fontSize: 12,
-  },
-  quickActionsGrid: {
+  listHeader: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 12,
-  },
-  quickAction: {
-    width: '48%',
-    aspectRatio: 1.5,
-    borderRadius: 16,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 16,
-  },
-  quickActionIcon: {
-    fontSize: 32,
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
     marginBottom: 8,
   },
-  quickActionLabel: {
+  listTitle: {
+    flex: 1,
+    fontSize: 16,
+    fontWeight: '600',
+    marginRight: 8,
+  },
+  listDiscountBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  listDiscountText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: 'bold',
+  },
+  listDescription: {
     fontSize: 14,
-    fontWeight: '500',
+    marginBottom: 8,
+  },
+  listMerchantRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 8,
+  },
+  listMerchant: {
+    fontSize: 13,
+  },
+  listPrices: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  listOriginalPrice: {
+    fontSize: 14,
+    textDecorationLine: 'line-through',
+  },
+  listDealPrice: {
+    fontSize: 20,
+    fontWeight: 'bold',
+  },
+  discountBadge: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 16,
+  },
+  discountText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: 'bold',
+  },
+  centerContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 32,
+  },
+  loadingText: {
+    marginTop: 16,
+    fontSize: 16,
     textAlign: 'center',
+  },
+  errorText: {
+    marginTop: 16,
+    fontSize: 16,
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  retryButton: {
+    marginTop: 16,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 8,
+  },
+  retryButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  emptyText: {
+    fontSize: 18,
+    fontWeight: '600',
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  emptySubtext: {
+    fontSize: 14,
+    textAlign: 'center',
+  },
+  footerLoader: {
+    paddingVertical: 20,
+    alignItems: 'center',
   },
 });

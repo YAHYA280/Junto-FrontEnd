@@ -1,6 +1,6 @@
 import React from 'react';
-import { SettingsScreen } from '../../screens/main/SettingsScreen';
+import { MyDealsScreen } from '../../screens/deals/MyDealsScreen';
 
-export default function TabTwoScreen() {
-  return <SettingsScreen />;
+export default function MyDealsTab() {
+  return <MyDealsScreen />;
 }
