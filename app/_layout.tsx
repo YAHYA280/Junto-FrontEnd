@@ -1,41 +1,63 @@
-import { Stack } from 'expo-router';
-import 'react-native-reanimated';
-import { useEffect } from 'react';
-import { useRouter, useSegments } from 'expo-router';
+import { Slot, useRouter, useSegments } from 'expo-router';
+import { useEffect, useState } from 'react';
+import { View, ActivityIndicator, StatusBar } from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { useAuthStore } from '../shared/store/authStore';
+import { useThemeStore } from '../shared/store/themeStore';
+import { useAppTheme } from '../shared/hooks/useAppTheme';
 
-import { useAuthStore } from '../store/authStore';
-import { ThemeProvider } from '../contexts/ThemeContext';
-
-export const unstable_settings = {
-  initialRouteName: '(auth)',
-};
-
-function useProtectedRoute() {
+export default function RootLayout() {
+  const { isAuthenticated, isLoading, checkAuth } = useAuthStore();
+  const { loadTheme, mode } = useThemeStore();
+  const theme = useAppTheme();
   const segments = useSegments();
   const router = useRouter();
-  const { isAuthenticated } = useAuthStore();
+  const [navigationReady, setNavigationReady] = useState(false);
 
   useEffect(() => {
+    checkAuth();
+    loadTheme();
+  }, []);
+
+  useEffect(() => {
+    // Wait for navigation to be ready
+    const timer = setTimeout(() => {
+      setNavigationReady(true);
+    }, 100);
+
+    return () => clearTimeout(timer);
+  }, []);
+
+  useEffect(() => {
+    if (isLoading || !navigationReady) return;
+
     const inAuthGroup = segments[0] === '(auth)';
 
     if (!isAuthenticated && !inAuthGroup) {
-      router.replace('/(auth)');
+      // Redirect to login if not authenticated
+      router.replace('/(auth)/login');
     } else if (isAuthenticated && inAuthGroup) {
+      // Redirect to tabs if authenticated
       router.replace('/(tabs)');
     }
-  }, [isAuthenticated, segments]);
-}
-
-export default function RootLayout() {
-  useProtectedRoute();
+  }, [isAuthenticated, isLoading, segments, navigationReady]);
 
   return (
-    <ThemeProvider>
-      <Stack screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="(auth)" options={{ headerShown: false }} />
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
-      </Stack>
-    </ThemeProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <SafeAreaProvider>
+        <StatusBar
+          barStyle={mode === 'dark' ? 'light-content' : 'dark-content'}
+          backgroundColor={theme.colors.background}
+        />
+        {isLoading ? (
+          <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: theme.colors.background }}>
+            <ActivityIndicator size="large" color={theme.colors.primary} />
+          </View>
+        ) : (
+          <Slot />
+        )}
+      </SafeAreaProvider>
+    </GestureHandlerRootView>
   );
 }

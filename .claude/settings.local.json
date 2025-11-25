@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm install:*)",
+      "Bash(npx nativewind --version)",
+      "Bash(npm uninstall:*)",
+      "Bash(dir:*)",
+      "Bash(findstr:*)",
+      "Bash(tree:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
