@@ -12,10 +12,11 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { Button, Card, Input, AnimatedView } from '../../components/ui';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { LinearGradient } from 'expo-linear-gradient';
+import { Button, Input } from '../../components/ui';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useAuthStore } from '../../store/authStore';
-import { responsive } from '../../utils/responsive/responsive';
 import authApi from '../../services/api/auth.api';
 import { UserRole } from '../../shared/types/user';
 
@@ -23,7 +24,7 @@ type EditField = 'displayName' | 'email' | 'phoneE164';
 
 export const EditProfileScreen: React.FC = () => {
   const router = useRouter();
-  const { colors } = useTheme();
+  const { colors, isDark } = useTheme();
   const { user, refreshUser, addRole } = useAuthStore();
 
   const [displayName, setDisplayName] = useState(user?.displayName || '');
@@ -44,9 +45,6 @@ export const EditProfileScreen: React.FC = () => {
     if (value.length > 50) {
       return 'Display name must be less than 50 characters';
     }
-    if (!/^[a-zA-Z\s]+$/.test(value)) {
-      return 'Display name can only contain letters and spaces';
-    }
     return '';
   };
 
@@ -61,35 +59,27 @@ export const EditProfileScreen: React.FC = () => {
   const validatePhone = (value: string): string => {
     if (!value) return '';
     if (!/^\+[1-9]\d{1,14}$/.test(value)) {
-      return 'Invalid phone format. Use E.164 format (e.g., +212612345678)';
+      return 'Use E.164 format (e.g., +212612345678)';
     }
     return '';
   };
 
   const handleFieldChange = (field: EditField, value: string) => {
-    console.log(`[EditProfileScreen] Updating ${field}:`, value);
-
-    // Update state
     switch (field) {
       case 'displayName':
         setDisplayName(value);
-        setErrors({ ...errors, displayName: validateDisplayName(value) });
         break;
       case 'email':
         setEmail(value);
-        setErrors({ ...errors, email: validateEmail(value) });
         break;
       case 'phoneE164':
         setPhoneE164(value);
-        setErrors({ ...errors, phoneE164: validatePhone(value) });
         break;
     }
+    setErrors({ ...errors, [field]: '' });
   };
 
   const handleSave = async () => {
-    console.log('[EditProfileScreen] Saving profile changes...');
-
-    // Validate all fields
     const displayNameError = validateDisplayName(displayName);
     const emailError = validateEmail(email);
     const phoneError = validatePhone(phoneE164);
@@ -100,11 +90,9 @@ export const EditProfileScreen: React.FC = () => {
         email: emailError,
         phoneE164: phoneError,
       });
-      console.log('[EditProfileScreen] Validation failed');
       return;
     }
 
-    // Ensure at least email or phone is provided
     if (!email && !phoneE164) {
       Alert.alert('Error', 'Please provide either an email or phone number');
       return;
@@ -113,59 +101,31 @@ export const EditProfileScreen: React.FC = () => {
     setIsLoading(true);
 
     try {
-      const updateData = {
+      await authApi.updateProfile({
         displayName,
         email: email || undefined,
         phoneE164: phoneE164 || undefined,
-      };
+      });
 
-      console.log('[EditProfileScreen] Profile data to update:', updateData);
-
-      // Call update profile API
-      await authApi.updateProfile(updateData);
-
-      // Refresh user data
       await refreshUser();
 
-      console.log('[EditProfileScreen] Profile updated successfully');
       Alert.alert('Success', 'Profile updated successfully', [
-        {
-          text: 'OK',
-          onPress: () => router.back(),
-        },
+        { text: 'OK', onPress: () => router.back() },
       ]);
     } catch (error: any) {
-      console.error('[EditProfileScreen] Update error:', error);
-      const errorMessage =
-        error.response?.data?.message ||
-        error.message ||
-        'Failed to update profile. Please try again.';
-      Alert.alert('Error', errorMessage);
+      Alert.alert('Error', error.response?.data?.message || error.message || 'Failed to update profile');
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleCancel = () => {
-    console.log('[EditProfileScreen] Cancelling edit');
-    router.back();
-  };
-
   const handleBecomeSeller = async () => {
-    console.log('[EditProfileScreen] Adding SELLER role...');
     setIsAddingRole(true);
-
     try {
       await addRole(UserRole.SELLER);
-      console.log('[EditProfileScreen] SELLER role added successfully');
-      Alert.alert('Success', 'You are now a seller! You can start listing items.');
+      Alert.alert('Success', 'You are now a seller!');
     } catch (error: any) {
-      console.error('[EditProfileScreen] Add role error:', error);
-      const errorMessage =
-        error.response?.data?.message ||
-        error.message ||
-        'Failed to add seller role. Please try again.';
-      Alert.alert('Error', errorMessage);
+      Alert.alert('Error', error.message || 'Failed to add seller role');
     } finally {
       setIsAddingRole(false);
     }
@@ -175,94 +135,105 @@ export const EditProfileScreen: React.FC = () => {
 
   if (!user) {
     return (
-      <View style={[styles.container, { backgroundColor: colors.background }]}>
-        <Text style={[styles.errorText, { color: colors.error }]}>
-          No user data available
-        </Text>
-      </View>
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
+        <View style={styles.errorContainer}>
+          <Ionicons name="person-outline" size={64} color={colors.textTertiary} />
+          <Text style={[styles.errorText, { color: colors.textSecondary }]}>
+            No user data available
+          </Text>
+        </View>
+      </SafeAreaView>
     );
   }
 
   return (
-    <KeyboardAvoidingView
-      style={[styles.container, { backgroundColor: colors.background }]}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      keyboardVerticalOffset={Platform.select({ ios: 0, android: 25 })}
-    >
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
+      <KeyboardAvoidingView
+        style={styles.keyboardView}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={0}
       >
-        {/* Header */}
-        <AnimatedView animation="fade" duration={500}>
-          <View style={styles.header}>
-            <TouchableOpacity
-              style={styles.backButton}
-              onPress={handleCancel}
-              activeOpacity={0.7}
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+        >
+          {/* Header with Gradient */}
+          <View style={styles.headerSection}>
+            <LinearGradient
+              colors={[colors.primary, colors.primaryLight]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.headerGradient}
             >
-              <Ionicons
-                name="arrow-back"
-                size={24}
-                color={colors.text}
-              />
-            </TouchableOpacity>
-            <Text style={[styles.title, { color: colors.text }]}>
-              Edit Profile
-            </Text>
-            <View style={styles.backButton} />
-          </View>
-        </AnimatedView>
-
-        {/* Avatar Section */}
-        <AnimatedView animation="scale" delay={100} duration={500}>
-          <Card variant="elevated" style={styles.avatarCard}>
-            <View style={styles.avatarContainer}>
-              {user.avatarUrl ? (
-                <Image
-                  source={{ uri: user.avatarUrl }}
-                  style={styles.avatar}
-                />
-              ) : (
-                <View
-                  style={[
-                    styles.avatarPlaceholder,
-                    { backgroundColor: colors.primary },
-                  ]}
-                >
-                  <Text style={styles.avatarText}>
-                    {displayName.charAt(0).toUpperCase()}
-                  </Text>
-                </View>
-              )}
-
-              {/* Change Avatar Button */}
+              {/* Back Button */}
               <TouchableOpacity
-                style={[
-                  styles.changeAvatarButton,
-                  { backgroundColor: colors.primary },
-                ]}
+                style={styles.backButton}
+                onPress={() => router.back()}
                 activeOpacity={0.7}
               >
-                <Ionicons name="camera" size={20} color="#fff" />
+                <Ionicons name="arrow-back" size={22} color="#FFFFFF" />
               </TouchableOpacity>
+
+              {/* Title */}
+              <Text style={styles.headerTitle}>Edit Profile</Text>
+
+              {/* Spacer for alignment */}
+              <View style={styles.backButton} />
+            </LinearGradient>
+
+            {/* Avatar Section (overlapping gradient) */}
+            <View style={styles.avatarWrapper}>
+              <View style={[
+                styles.avatarContainer,
+                {
+                  backgroundColor: isDark ? colors.surface : '#FFFFFF',
+                  borderColor: isDark ? colors.border : '#E5E7EB',
+                }
+              ]}>
+                {user.avatarUrl ? (
+                  <Image source={{ uri: user.avatarUrl }} style={styles.avatar} />
+                ) : (
+                  <LinearGradient
+                    colors={[colors.primary, colors.primaryLight]}
+                    style={styles.avatarPlaceholder}
+                  >
+                    <Text style={styles.avatarText}>
+                      {displayName.charAt(0).toUpperCase() || 'U'}
+                    </Text>
+                  </LinearGradient>
+                )}
+
+                <TouchableOpacity
+                  style={[styles.cameraButton, { backgroundColor: colors.primary }]}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons name="camera" size={16} color="#FFFFFF" />
+                </TouchableOpacity>
+              </View>
+              <Text style={[styles.changePhotoText, { color: colors.textSecondary }]}>
+                Tap to change photo
+              </Text>
+            </View>
+          </View>
+
+          {/* Personal Info Card */}
+          <View style={[
+            styles.card,
+            {
+              backgroundColor: isDark ? colors.surface : '#FFFFFF',
+              borderColor: isDark ? colors.border : '#E5E7EB',
+            }
+          ]}>
+            <View style={styles.cardHeader}>
+              <View style={[styles.cardIcon, { backgroundColor: colors.primary + '15' }]}>
+                <Ionicons name="person" size={18} color={colors.primary} />
+              </View>
+              <Text style={[styles.cardTitle, { color: colors.text }]}>
+                Personal Information
+              </Text>
             </View>
 
-            <Text style={[styles.changeAvatarText, { color: colors.textSecondary }]}>
-              Tap to change profile picture
-            </Text>
-          </Card>
-        </AnimatedView>
-
-        {/* Form Fields */}
-        <AnimatedView animation="slideUp" delay={150} duration={500}>
-          <Card variant="elevated" style={styles.formCard}>
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>
-              Personal Information
-            </Text>
-
-            {/* Display Name */}
             <Input
               label="Display Name"
               placeholder="Enter your name"
@@ -270,11 +241,11 @@ export const EditProfileScreen: React.FC = () => {
               onChangeText={(text) => handleFieldChange('displayName', text)}
               error={errors.displayName}
               autoCapitalize="words"
+              leftIcon="person-outline"
             />
 
-            {/* Email */}
             <Input
-              label="Email (optional)"
+              label="Email"
               placeholder="Enter your email"
               value={email}
               onChangeText={(text) => handleFieldChange('email', text)}
@@ -282,134 +253,160 @@ export const EditProfileScreen: React.FC = () => {
               keyboardType="email-address"
               autoCapitalize="none"
               autoComplete="email"
+              leftIcon="mail-outline"
             />
 
-            {/* Phone */}
             <Input
-              label="Phone Number (optional)"
+              label="Phone Number"
               placeholder="+212612345678"
               value={phoneE164}
               onChangeText={(text) => handleFieldChange('phoneE164', text)}
               error={errors.phoneE164}
               keyboardType="phone-pad"
               autoComplete="tel"
+              leftIcon="call-outline"
             />
 
-            <View style={styles.noteContainer}>
-              <Ionicons
-                name="information-circle-outline"
-                size={16}
-                color={colors.textTertiary}
-              />
-              <Text style={[styles.noteText, { color: colors.textTertiary }]}>
-                You must provide at least one contact method (email or phone)
+            <View style={[styles.infoNote, { backgroundColor: colors.info + '10' }]}>
+              <Ionicons name="information-circle" size={18} color={colors.info} />
+              <Text style={[styles.infoNoteText, { color: colors.info }]}>
+                At least one contact method (email or phone) is required
               </Text>
             </View>
-          </Card>
-        </AnimatedView>
-
-        {/* Account Info */}
-        <AnimatedView animation="slideUp" delay={200} duration={500}>
-          <Card variant="elevated" style={styles.infoCard}>
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>
-              Account Status
-            </Text>
-
-            <View style={styles.infoRow}>
-              <View style={styles.infoLeft}>
-                <Ionicons
-                  name={user.isVerified ? 'checkmark-circle' : 'alert-circle-outline'}
-                  size={20}
-                  color={user.isVerified ? colors.success : colors.warning}
-                />
-                <Text style={[styles.infoLabel, { color: colors.textSecondary }]}>
-                  Verification Status
-                </Text>
-              </View>
-              <Text style={[styles.infoValue, { color: colors.text }]}>
-                {user.isVerified ? 'Verified' : 'Not Verified'}
-              </Text>
-            </View>
-
-            {!user.isVerified && (
-              <TouchableOpacity
-                style={[
-                  styles.verifyButton,
-                  { backgroundColor: colors.warning + '22', borderColor: colors.warning },
-                ]}
-                activeOpacity={0.7}
-              >
-                <Text style={[styles.verifyButtonText, { color: colors.warning }]}>
-                  Verify Account
-                </Text>
-              </TouchableOpacity>
-            )}
-
-            {/* Seller Role Status */}
-            <View style={[styles.infoRow, { marginTop: responsive.spacing.md }]}>
-              <View style={styles.infoLeft}>
-                <Ionicons
-                  name={isSeller ? 'storefront' : 'storefront-outline'}
-                  size={20}
-                  color={isSeller ? colors.primary : colors.textSecondary}
-                />
-                <Text style={[styles.infoLabel, { color: colors.textSecondary }]}>
-                  Seller Account
-                </Text>
-              </View>
-              <Text style={[styles.infoValue, { color: colors.text }]}>
-                {isSeller ? 'Active' : 'Not Active'}
-              </Text>
-            </View>
-
-            {!isSeller && (
-              <TouchableOpacity
-                style={[
-                  styles.verifyButton,
-                  { backgroundColor: colors.primary + '22', borderColor: colors.primary },
-                ]}
-                onPress={handleBecomeSeller}
-                disabled={isAddingRole}
-                activeOpacity={0.7}
-              >
-                {isAddingRole ? (
-                  <Text style={[styles.verifyButtonText, { color: colors.primary }]}>
-                    Adding Seller Role...
-                  </Text>
-                ) : (
-                  <Text style={[styles.verifyButtonText, { color: colors.primary }]}>
-                    Be a Seller
-                  </Text>
-                )}
-              </TouchableOpacity>
-            )}
-          </Card>
-        </AnimatedView>
-
-        {/* Action Buttons */}
-        <AnimatedView animation="slideUp" delay={250} duration={500}>
-          <View style={styles.buttonContainer}>
-            <Button
-              title={isLoading ? 'Saving...' : 'Save Changes'}
-              onPress={handleSave}
-              loading={isLoading}
-              disabled={isLoading}
-              variant="primary"
-              size="large"
-              style={styles.saveButton}
-            />
-
-            <Button
-              title="Cancel"
-              onPress={handleCancel}
-              disabled={isLoading}
-              variant="outline"
-              size="large"
-            />
           </View>
-        </AnimatedView>
-      </ScrollView>
-    </KeyboardAvoidingView>
+
+          {/* Account Status Card */}
+          <View style={[
+            styles.card,
+            {
+              backgroundColor: isDark ? colors.surface : '#FFFFFF',
+              borderColor: isDark ? colors.border : '#E5E7EB',
+            }
+          ]}>
+            <View style={styles.cardHeader}>
+              <View style={[styles.cardIcon, { backgroundColor: colors.success + '15' }]}>
+                <Ionicons name="shield-checkmark" size={18} color={colors.success} />
+              </View>
+              <Text style={[styles.cardTitle, { color: colors.text }]}>
+                Account Status
+              </Text>
+            </View>
+
+            {/* Verification Status */}
+            <View style={[
+              styles.statusRow,
+              { borderBottomColor: isDark ? colors.border : '#F3F4F6' }
+            ]}>
+              <View style={styles.statusLeft}>
+                <View style={[
+                  styles.statusIcon,
+                  { backgroundColor: user.isVerified ? colors.success + '15' : colors.warning + '15' }
+                ]}>
+                  <Ionicons
+                    name={user.isVerified ? 'checkmark-circle' : 'alert-circle'}
+                    size={20}
+                    color={user.isVerified ? colors.success : colors.warning}
+                  />
+                </View>
+                <View>
+                  <Text style={[styles.statusLabel, { color: colors.text }]}>Verification</Text>
+                  <Text style={[styles.statusValue, { color: colors.textSecondary }]}>
+                    {user.isVerified ? 'Verified' : 'Not Verified'}
+                  </Text>
+                </View>
+              </View>
+              {!user.isVerified && (
+                <TouchableOpacity
+                  style={[styles.statusAction, { backgroundColor: colors.warning + '15' }]}
+                  activeOpacity={0.7}
+                >
+                  <Text style={[styles.statusActionText, { color: colors.warning }]}>Verify</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+
+            {/* Seller Status */}
+            <View style={styles.statusRow}>
+              <View style={styles.statusLeft}>
+                <View style={[
+                  styles.statusIcon,
+                  { backgroundColor: isSeller ? colors.primary + '15' : colors.textTertiary + '15' }
+                ]}>
+                  <Ionicons
+                    name={isSeller ? 'storefront' : 'storefront-outline'}
+                    size={20}
+                    color={isSeller ? colors.primary : colors.textTertiary}
+                  />
+                </View>
+                <View>
+                  <Text style={[styles.statusLabel, { color: colors.text }]}>Seller Account</Text>
+                  <Text style={[styles.statusValue, { color: colors.textSecondary }]}>
+                    {isSeller ? 'Active' : 'Not Active'}
+                  </Text>
+                </View>
+              </View>
+              {!isSeller && (
+                <TouchableOpacity
+                  style={[styles.statusAction, { backgroundColor: colors.primary + '15' }]}
+                  onPress={handleBecomeSeller}
+                  disabled={isAddingRole}
+                  activeOpacity={0.7}
+                >
+                  <Text style={[styles.statusActionText, { color: colors.primary }]}>
+                    {isAddingRole ? 'Adding...' : 'Become Seller'}
+                  </Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          </View>
+
+          {/* Action Buttons */}
+          <View style={styles.buttonSection}>
+            <TouchableOpacity
+              style={styles.saveButtonWrapper}
+              onPress={handleSave}
+              disabled={isLoading}
+              activeOpacity={0.8}
+            >
+              <LinearGradient
+                colors={[colors.primary, colors.primaryLight]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={styles.saveButton}
+              >
+                {isLoading ? (
+                  <Text style={styles.saveButtonText}>Saving...</Text>
+                ) : (
+                  <>
+                    <Ionicons name="checkmark-circle" size={20} color="#FFFFFF" />
+                    <Text style={styles.saveButtonText}>Save Changes</Text>
+                  </>
+                )}
+              </LinearGradient>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[
+                styles.cancelButton,
+                {
+                  backgroundColor: isDark ? colors.surface : '#FFFFFF',
+                  borderColor: isDark ? colors.border : '#E5E7EB',
+                }
+              ]}
+              onPress={() => router.back()}
+              disabled={isLoading}
+              activeOpacity={0.7}
+            >
+              <Ionicons name="close-circle-outline" size={20} color={colors.textSecondary} />
+              <Text style={[styles.cancelButtonText, { color: colors.text }]}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Bottom Spacing */}
+          <View style={{ height: 100 }} />
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 };
 
@@ -417,128 +414,227 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  scrollContent: {
-    padding: responsive.spacing.lg,
-    paddingBottom: 120,
+  keyboardView: {
+    flex: 1,
   },
-  header: {
+  scrollContent: {
+    paddingBottom: 20,
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 16,
+  },
+  errorText: {
+    fontSize: 16,
+  },
+
+  // Header Section
+  headerSection: {
+    marginBottom: 16,
+  },
+  headerGradient: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: responsive.spacing.lg,
+    paddingTop: 12,
+    paddingBottom: 60,
+    paddingHorizontal: 16,
+    borderBottomLeftRadius: 32,
+    borderBottomRightRadius: 32,
   },
   backButton: {
     width: 40,
     height: 40,
+    borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.2)',
   },
-  title: {
-    fontSize: responsive.fontSize.xxl,
-    fontWeight: 'bold',
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#FFFFFF',
   },
-  errorText: {
-    fontSize: responsive.fontSize.base,
-    textAlign: 'center',
-    marginTop: responsive.spacing.xl,
-  },
-  avatarCard: {
+
+  // Avatar Section
+  avatarWrapper: {
     alignItems: 'center',
-    paddingVertical: responsive.spacing.xl,
-    marginBottom: responsive.spacing.lg,
+    marginTop: -50,
   },
   avatarContainer: {
-    position: 'relative',
-    marginBottom: responsive.spacing.sm,
+    padding: 6,
+    borderRadius: 60,
+    borderWidth: 1,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 5,
   },
   avatar: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
+    width: 100,
+    height: 100,
+    borderRadius: 50,
   },
   avatarPlaceholder: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
+    width: 100,
+    height: 100,
+    borderRadius: 50,
     justifyContent: 'center',
     alignItems: 'center',
   },
   avatarText: {
-    fontSize: 48,
-    fontWeight: 'bold',
-    color: '#fff',
+    fontSize: 40,
+    fontWeight: '700',
+    color: '#FFFFFF',
   },
-  changeAvatarButton: {
+  cameraButton: {
     position: 'absolute',
-    bottom: 0,
-    right: 0,
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    bottom: 4,
+    right: 4,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 3,
-    borderColor: '#fff',
+    borderColor: '#FFFFFF',
   },
-  changeAvatarText: {
-    fontSize: responsive.fontSize.sm,
+  changePhotoText: {
+    fontSize: 13,
+    marginTop: 10,
   },
-  formCard: {
-    marginBottom: responsive.spacing.lg,
+
+  // Card Styles
+  card: {
+    marginHorizontal: 20,
+    marginBottom: 16,
+    padding: 20,
+    borderRadius: 16,
+    borderWidth: 1,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 3,
   },
-  sectionTitle: {
-    fontSize: responsive.fontSize.lg,
-    fontWeight: 'bold',
-    marginBottom: responsive.spacing.md,
-  },
-  noteContainer: {
+  cardHeader: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
-    marginTop: responsive.spacing.sm,
-    paddingHorizontal: responsive.spacing.xs,
+    alignItems: 'center',
+    marginBottom: 20,
   },
-  noteText: {
-    fontSize: responsive.fontSize.xs,
-    marginLeft: responsive.spacing.xs,
+  cardIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  cardTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+
+  // Info Note
+  infoNote: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+    borderRadius: 10,
+    gap: 10,
+    marginTop: 8,
+  },
+  infoNoteText: {
     flex: 1,
+    fontSize: 13,
     lineHeight: 18,
   },
-  infoCard: {
-    marginBottom: responsive.spacing.lg,
-  },
-  infoRow: {
+
+  // Status Row
+  statusRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: responsive.spacing.md,
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: 'transparent',
   },
-  infoLeft: {
+  statusLeft: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 12,
   },
-  infoLabel: {
-    fontSize: responsive.fontSize.base,
-    marginLeft: responsive.spacing.sm,
-  },
-  infoValue: {
-    fontSize: responsive.fontSize.base,
-    fontWeight: '600',
-  },
-  verifyButton: {
-    paddingVertical: responsive.spacing.sm,
-    paddingHorizontal: responsive.spacing.md,
-    borderRadius: responsive.borderRadius.md,
-    borderWidth: 1,
+  statusIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    justifyContent: 'center',
     alignItems: 'center',
   },
-  verifyButtonText: {
-    fontSize: responsive.fontSize.base,
+  statusLabel: {
+    fontSize: 14,
+    fontWeight: '500',
+    marginBottom: 2,
+  },
+  statusValue: {
+    fontSize: 12,
+  },
+  statusAction: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 8,
+  },
+  statusActionText: {
+    fontSize: 13,
     fontWeight: '600',
   },
-  buttonContainer: {
-    gap: responsive.spacing.md,
+
+  // Buttons
+  buttonSection: {
+    paddingHorizontal: 20,
+    gap: 12,
+    marginTop: 8,
+  },
+  saveButtonWrapper: {
+    borderRadius: 14,
+    overflow: 'hidden',
+    shadowColor: '#059669',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 5,
   },
   saveButton: {
-    marginBottom: responsive.spacing.sm,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 16,
+    gap: 8,
+  },
+  saveButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  cancelButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 16,
+    borderRadius: 14,
+    borderWidth: 1,
+    gap: 8,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  cancelButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
   },
 });

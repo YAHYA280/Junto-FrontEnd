@@ -13,7 +13,7 @@ import { useRouter } from 'expo-router';
 import { Button, Card, Input, ErrorMessage, AnimatedView } from '../../components/ui';
 import { useAuthStore } from '../../store/authStore';
 import { useTheme } from '../../contexts/ThemeContext';
-import { loginSchema, validateField } from '../../utils/validation/auth.schemas';
+import { loginSchema } from '../../utils/validation/auth.schemas';
 import { responsive } from '../../utils/responsive/responsive';
 
 type LoginMethod = 'email' | 'phone';
@@ -28,16 +28,6 @@ export const LoginScreen: React.FC = () => {
   const [phoneE164, setPhoneE164] = useState('');
   const [password, setPassword] = useState('');
   const [errors, setErrors] = useState<Record<string, string>>({});
-
-  const validateFormField = (field: string, value: string) => {
-    console.log(`[LoginScreen] Validating field: ${field}, value: ${value}`);
-    const error = validateField(loginSchema, field, value);
-    setErrors((prev) => ({
-      ...prev,
-      [field]: error || '',
-    }));
-    console.log(`[LoginScreen] Validation result for ${field}:`, error || 'No error');
-  };
 
   const handleLogin = async () => {
     console.log('[LoginScreen] Starting login process...');
@@ -186,10 +176,7 @@ export const LoginScreen: React.FC = () => {
                     label="Email"
                     placeholder="Enter your email"
                     value={email}
-                    onChangeText={(text) => {
-                      setEmail(text);
-                      validateFormField('email', text);
-                    }}
+                    onChangeText={setEmail}
                     error={errors.email}
                     keyboardType="email-address"
                     autoCapitalize="none"
@@ -200,10 +187,7 @@ export const LoginScreen: React.FC = () => {
                     label="Phone Number"
                     placeholder="+212612345678"
                     value={phoneE164}
-                    onChangeText={(text) => {
-                      setPhoneE164(text);
-                      validateFormField('phoneE164', text);
-                    }}
+                    onChangeText={setPhoneE164}
                     error={errors.phoneE164}
                     keyboardType="phone-pad"
                     autoComplete="tel"
@@ -215,10 +199,7 @@ export const LoginScreen: React.FC = () => {
                   label="Password"
                   placeholder="Enter your password"
                   value={password}
-                  onChangeText={(text) => {
-                    setPassword(text);
-                    validateFormField('password', text);
-                  }}
+                  onChangeText={setPassword}
                   error={errors.password}
                   isPassword
                   autoCapitalize="none"

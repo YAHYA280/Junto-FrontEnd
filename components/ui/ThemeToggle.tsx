@@ -1,48 +1,81 @@
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../contexts/ThemeContext';
 
 export const ThemeToggle: React.FC = () => {
   const { colors, themeMode, setThemeMode, isDark } = useTheme();
 
-  const themes: Array<{ mode: 'light' | 'dark' | 'system'; label: string; icon: string }> = [
-    { mode: 'light', label: 'Light', icon: '☀️' },
-    { mode: 'dark', label: 'Dark', icon: '🌙' },
-    { mode: 'system', label: 'System', icon: '⚙️' },
+  const themes: Array<{
+    mode: 'light' | 'dark' | 'system';
+    label: string;
+    icon: keyof typeof Ionicons.glyphMap;
+  }> = [
+    { mode: 'light', label: 'Light', icon: 'sunny' },
+    { mode: 'dark', label: 'Dark', icon: 'moon' },
+    { mode: 'system', label: 'System', icon: 'settings' },
   ];
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.surface }]}>
+    <View style={[
+      styles.container,
+      {
+        backgroundColor: isDark ? colors.surface : '#FFFFFF',
+        borderWidth: 1,
+        borderColor: isDark ? colors.border : '#E5E7EB',
+        shadowColor: '#000000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: isDark ? 0.3 : 0.1,
+        shadowRadius: 8,
+        elevation: 4,
+      }
+    ]}>
       <Text style={[styles.title, { color: colors.text }]}>Theme</Text>
       <View style={styles.optionsContainer}>
-        {themes.map((theme) => (
-          <TouchableOpacity
-            key={theme.mode}
-            style={[
-              styles.option,
-              {
-                backgroundColor:
-                  themeMode === theme.mode ? colors.primary + '33' : colors.backgroundSecondary,
-                borderColor: themeMode === theme.mode ? colors.primary : colors.border,
-              },
-            ]}
-            onPress={() => setThemeMode(theme.mode)}
-            activeOpacity={0.7}
-          >
-            <Text style={styles.icon}>{theme.icon}</Text>
-            <Text
+        {themes.map((theme) => {
+          const isActive = themeMode === theme.mode;
+
+          return (
+            <TouchableOpacity
+              key={theme.mode}
               style={[
-                styles.label,
+                styles.option,
                 {
-                  color: themeMode === theme.mode ? colors.primary : colors.text,
-                  fontWeight: themeMode === theme.mode ? '600' : '400',
+                  backgroundColor: isActive
+                    ? isDark ? colors.primary + '22' : '#ECFDF5'
+                    : isDark ? colors.backgroundSecondary : '#F9FAFB',
+                  borderColor: isActive ? colors.primary : isDark ? colors.border : '#E5E7EB',
+                  shadowColor: isActive ? colors.primary : '#000000',
+                  shadowOffset: { width: 0, height: isActive ? 2 : 1 },
+                  shadowOpacity: isActive ? 0.2 : (isDark ? 0.2 : 0.06),
+                  shadowRadius: isActive ? 4 : 2,
+                  elevation: isActive ? 3 : 1,
                 },
               ]}
+              onPress={() => setThemeMode(theme.mode)}
+              activeOpacity={0.7}
             >
-              {theme.label}
-            </Text>
-          </TouchableOpacity>
-        ))}
+              <View style={styles.iconContainer}>
+                <Ionicons
+                  name={theme.icon}
+                  size={24}
+                  color={isActive ? colors.primary : colors.textSecondary}
+                />
+              </View>
+              <Text
+                style={[
+                  styles.label,
+                  {
+                    color: isActive ? colors.primary : colors.text,
+                    fontWeight: isActive ? '600' : '400',
+                  },
+                ]}
+              >
+                {theme.label}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
       </View>
     </View>
   );
@@ -73,8 +106,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 2,
   },
-  icon: {
-    fontSize: 24,
+  iconContainer: {
     marginBottom: 4,
   },
   label: {

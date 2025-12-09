@@ -59,55 +59,55 @@ export interface ThemeColors {
 }
 
 const lightColors: ThemeColors = {
-  // Backgrounds
-  background: '#F2EFE7',
-  backgroundSecondary: '#FFFFFF',
-  backgroundTertiary: '#E8E5DD',
+  // Backgrounds - Light Gray for contrast (like dark mode has dark gray bg)
+  background: '#F3F4F6',
+  backgroundSecondary: '#E5E7EB',
+  backgroundTertiary: '#D1D5DB',
 
-  // Surfaces
+  // Surfaces - White cards on gray backgrounds (creates contrast)
   surface: '#FFFFFF',
-  surfaceSecondary: '#F2EFE7',
+  surfaceSecondary: '#F9FAFB',
 
-  // Text
-  text: '#1F2937',
+  // Text - Dark gray for readability
+  text: '#111827',
   textSecondary: '#4B5563',
   textTertiary: '#6B7280',
   textInverse: '#FFFFFF',
 
-  // Primary
-  primary: '#48A6A7',
-  primaryLight: '#9ACBD0',
-  primaryDark: '#006A71',
+  // Primary - Main Emerald Green #059669
+  primary: '#059669',
+  primaryLight: '#10B981',
+  primaryDark: '#047857',
 
-  // Accent
-  accent: '#9ACBD0',
-  accentLight: '#B5DDE0',
+  // Accent - Lighter emerald for highlights
+  accent: '#34D399',
+  accentLight: '#6EE7B7',
 
   // Semantic
-  success: '#10B981',
+  success: '#059669',
   warning: '#F59E0B',
   error: '#EF4444',
-  info: '#48A6A7',
+  info: '#3B82F6',
 
-  // Borders
-  border: '#D6D3CB',
-  borderLight: '#E8E5DD',
-  divider: '#D6D3CB',
+  // Borders - Darker gray for visibility on gray bg
+  border: '#D1D5DB',
+  borderLight: '#E5E7EB',
+  divider: '#D1D5DB',
 
-  // Glassmorphism
-  glassBackground: 'rgba(242, 239, 231, 0.7)',
-  glassBorder: 'rgba(72, 166, 167, 0.2)',
-  glassBackgroundLight: 'rgba(255, 255, 255, 0.5)',
+  // Glassmorphism - White with subtle transparency
+  glassBackground: 'rgba(255, 255, 255, 0.95)',
+  glassBorder: 'rgba(0, 0, 0, 0.08)',
+  glassBackgroundLight: 'rgba(255, 255, 255, 0.9)',
 
-  // Gradients
-  gradientStart: '#9ACBD0',
-  gradientMiddle: '#48A6A7',
-  gradientEnd: '#006A71',
+  // Gradients - Emerald gradient for buttons/elements
+  gradientStart: '#059669',
+  gradientMiddle: '#10B981',
+  gradientEnd: '#34D399',
 
-  // Shadow
-  shadow: 'rgba(0, 106, 113, 0.1)',
+  // Shadow - Darker shadow for visibility on gray
+  shadow: 'rgba(0, 0, 0, 0.15)',
 
-  // Tab Bar
+  // Tab Bar - White (stands out from gray background)
   tabBarBackground: '#FFFFFF',
   icon: '#6B7280',
 
@@ -115,57 +115,57 @@ const lightColors: ThemeColors = {
 };
 
 const darkColors: ThemeColors = {
-  // Backgrounds
-  background: '#0D1018',
-  backgroundSecondary: '#1A1F2E',
-  backgroundTertiary: '#252A3A',
+  // Backgrounds - True dark for OLED-friendly contrast
+  background: '#111111',
+  backgroundSecondary: '#1A1A1A',
+  backgroundTertiary: '#262626',
 
-  // Surfaces
-  surface: '#1A1F2E',
-  surfaceSecondary: '#252A3A',
+  // Surfaces - Elevated cards with clear contrast
+  surface: '#1E1E1E',
+  surfaceSecondary: '#2A2A2A',
 
-  // Text
-  text: '#F2EFE7',
-  textSecondary: '#CBD5E1',
-  textTertiary: '#94A3B8',
-  textInverse: '#0D1018',
+  // Text - High contrast for readability
+  text: '#FFFFFF',
+  textSecondary: '#A3A3A3',
+  textTertiary: '#737373',
+  textInverse: '#111111',
 
-  // Primary
-  primary: '#9ACBD0',
-  primaryLight: '#B5DDE0',
-  primaryDark: '#48A6A7',
+  // Primary - Bright emerald for dark mode pop
+  primary: '#10B981',
+  primaryLight: '#34D399',
+  primaryDark: '#059669',
 
-  // Accent
-  accent: '#48A6A7',
-  accentLight: '#9ACBD0',
+  // Accent - Vibrant emerald
+  accent: '#6EE7B7',
+  accentLight: '#A7F3D0',
 
-  // Semantic
-  success: '#34D399',
+  // Semantic - Brighter for dark backgrounds
+  success: '#22C55E',
   warning: '#FBBF24',
   error: '#F87171',
-  info: '#9ACBD0',
+  info: '#60A5FA',
 
-  // Borders
-  border: '#2A3142',
-  borderLight: '#353B4D',
-  divider: '#2A3142',
+  // Borders - Visible but subtle
+  border: '#333333',
+  borderLight: '#404040',
+  divider: '#2A2A2A',
 
-  // Glassmorphism
-  glassBackground: 'rgba(26, 31, 46, 0.7)',
-  glassBorder: 'rgba(154, 203, 208, 0.2)',
-  glassBackgroundLight: 'rgba(37, 42, 58, 0.5)',
+  // Glassmorphism - Dark glass effect
+  glassBackground: 'rgba(30, 30, 30, 0.95)',
+  glassBorder: 'rgba(255, 255, 255, 0.1)',
+  glassBackgroundLight: 'rgba(42, 42, 42, 0.9)',
 
-  // Gradients
-  gradientStart: '#006A71',
-  gradientMiddle: '#48A6A7',
-  gradientEnd: '#9ACBD0',
+  // Gradients - Emerald gradient for dark mode
+  gradientStart: '#059669',
+  gradientMiddle: '#10B981',
+  gradientEnd: '#34D399',
 
-  // Shadow
-  shadow: 'rgba(0, 0, 0, 0.3)',
+  // Shadow - Subtle glow effect
+  shadow: 'rgba(0, 0, 0, 0.6)',
 
-  // Tab Bar
-  tabBarBackground: '#1A1F2E',
-  icon: '#94A3B8',
+  // Tab Bar - Matches surface for cohesion
+  tabBarBackground: '#1E1E1E',
+  icon: '#737373',
 
   isDark: true,
 };

@@ -114,7 +114,7 @@ export default function TabLayout() {
                   <Ionicons name="person" size={27} color="#fff" />
                 </ConditionalComponent>
                 <ConditionalComponent isValid={!focused}>
-                  <Ionicons name="person" size={27} color={colors.icon} />
+                  <Ionicons name="person-outline" size={27} color={colors.icon} />
                 </ConditionalComponent>
               </View>
             ),

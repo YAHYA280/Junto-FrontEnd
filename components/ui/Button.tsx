@@ -35,44 +35,54 @@ export const Button: React.FC<ButtonProps> = ({
   ];
 
   const getVariantStyles = (): ViewStyle => {
+    const baseShadow = isDark
+      ? { shadowOpacity: 0.5 }
+      : { shadowOpacity: 0.3 };
+
     switch (variant) {
       case 'primary':
         return {
           backgroundColor: colors.primary,
+          borderWidth: 1,
+          borderColor: isDark ? colors.primaryLight : colors.primaryDark,
           shadowColor: colors.primary,
-          shadowOffset: { width: 0, height: 8 },
-          shadowOpacity: 0.4,
-          shadowRadius: 12,
-          elevation: 8,
+          shadowOffset: { width: 0, height: 4 },
+          ...baseShadow,
+          shadowRadius: 8,
+          elevation: 6,
         };
       case 'secondary':
         return {
           backgroundColor: colors.accent,
+          borderWidth: 1,
+          borderColor: isDark ? colors.accentLight : colors.primary,
           shadowColor: colors.accent,
-          shadowOffset: { width: 0, height: 8 },
-          shadowOpacity: 0.4,
-          shadowRadius: 12,
-          elevation: 8,
+          shadowOffset: { width: 0, height: 4 },
+          ...baseShadow,
+          shadowRadius: 8,
+          elevation: 6,
         };
       case 'outline':
         return {
-          backgroundColor: colors.glassBackgroundLight,
+          backgroundColor: isDark ? colors.surface : '#FFFFFF',
           borderWidth: 2,
           borderColor: colors.primary,
-          shadowColor: colors.shadow,
-          shadowOffset: { width: 0, height: 4 },
-          shadowOpacity: 0.2,
-          shadowRadius: 8,
+          shadowColor: '#000000',
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: isDark ? 0.3 : 0.1,
+          shadowRadius: 6,
           elevation: 4,
         };
       default:
         return {
           backgroundColor: colors.primary,
+          borderWidth: 1,
+          borderColor: isDark ? colors.primaryLight : colors.primaryDark,
           shadowColor: colors.primary,
-          shadowOffset: { width: 0, height: 8 },
-          shadowOpacity: 0.4,
-          shadowRadius: 12,
-          elevation: 8,
+          shadowOffset: { width: 0, height: 4 },
+          ...baseShadow,
+          shadowRadius: 8,
+          elevation: 6,
         };
     }
   };

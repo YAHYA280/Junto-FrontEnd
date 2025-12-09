@@ -13,7 +13,7 @@ import { useRouter } from 'expo-router';
 import { Button, Card, Input, ErrorMessage, AnimatedView } from '../../components/ui';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useAuthStore } from '../../store/authStore';
-import { registerSchema, validateField } from '../../utils/validation/auth.schemas';
+import { registerSchema } from '../../utils/validation/auth.schemas';
 import { responsive } from '../../utils/responsive/responsive';
 
 type LoginMethod = 'email' | 'phone';
@@ -30,16 +30,6 @@ export const RegisterScreen: React.FC = () => {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [errors, setErrors] = useState<Record<string, string>>({});
-
-  const validateFormField = (field: string, value: string) => {
-    console.log(`[RegisterScreen] Validating field: ${field}, value: ${value}`);
-    const error = validateField(registerSchema, field, value);
-    setErrors((prev) => ({
-      ...prev,
-      [field]: error || '',
-    }));
-    console.log(`[RegisterScreen] Validation result for ${field}:`, error || 'No error');
-  };
 
   const handleRegister = async () => {
     console.log('[RegisterScreen] Starting registration process...');
@@ -191,10 +181,7 @@ export const RegisterScreen: React.FC = () => {
               label="Display Name"
               placeholder="Enter your name"
               value={displayName}
-              onChangeText={(text) => {
-                setDisplayName(text);
-                validateFormField('displayName', text);
-              }}
+              onChangeText={setDisplayName}
               error={errors.displayName}
               autoCapitalize="words"
             />
@@ -205,10 +192,7 @@ export const RegisterScreen: React.FC = () => {
                 label="Email"
                 placeholder="Enter your email"
                 value={email}
-                onChangeText={(text) => {
-                  setEmail(text);
-                  validateFormField('email', text);
-                }}
+                onChangeText={setEmail}
                 error={errors.email}
                 keyboardType="email-address"
                 autoCapitalize="none"
@@ -219,10 +203,7 @@ export const RegisterScreen: React.FC = () => {
                 label="Phone Number"
                 placeholder="+212612345678"
                 value={phoneE164}
-                onChangeText={(text) => {
-                  setPhoneE164(text);
-                  validateFormField('phoneE164', text);
-                }}
+                onChangeText={setPhoneE164}
                 error={errors.phoneE164}
                 keyboardType="phone-pad"
                 autoComplete="tel"
@@ -234,10 +215,7 @@ export const RegisterScreen: React.FC = () => {
               label="Password"
               placeholder="Enter your password"
               value={password}
-              onChangeText={(text) => {
-                setPassword(text);
-                validateFormField('password', text);
-              }}
+              onChangeText={setPassword}
               error={errors.password}
               isPassword
               autoCapitalize="none"
@@ -248,10 +226,7 @@ export const RegisterScreen: React.FC = () => {
               label="Confirm Password"
               placeholder="Re-enter your password"
               value={confirmPassword}
-              onChangeText={(text) => {
-                setConfirmPassword(text);
-                validateFormField('confirmPassword', text);
-              }}
+              onChangeText={setConfirmPassword}
               error={errors.confirmPassword}
               isPassword
               autoCapitalize="none"

@@ -242,7 +242,6 @@ export const EditDealScreen: React.FC = () => {
               onChangeText={setDescription}
               multiline
               numberOfLines={4}
-              style={styles.textArea}
             />
 
             <Input
@@ -365,7 +364,6 @@ export const EditDealScreen: React.FC = () => {
               onChangeText={setRedemptionNotes}
               multiline
               numberOfLines={4}
-              style={styles.textArea}
               leftIcon="help-circle-outline"
             />
           </Card>

@@ -24,7 +24,18 @@ export const Header: React.FC<HeaderProps> = ({
 
   return (
     <>
-      <View style={[styles.container, { borderBottomColor: colors.glassBorder }]}>
+      <View style={[
+        styles.container,
+        {
+          borderBottomColor: isDark ? colors.border : '#E5E7EB',
+          backgroundColor: isDark ? colors.surface : '#FFFFFF',
+          shadowColor: '#000000',
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: isDark ? 0.3 : 0.1,
+          shadowRadius: 8,
+          elevation: 4,
+        }
+      ]}>
         <BlurView
           intensity={isDark ? 50 : 40}
           tint={isDark ? 'dark' : 'light'}
@@ -32,13 +43,20 @@ export const Header: React.FC<HeaderProps> = ({
         >
           <View style={[
             styles.content,
-            { backgroundColor: colors.glassBackground },
+            { backgroundColor: isDark ? colors.surface : '#FFFFFF' },
             compact && styles.compactContent
           ]}>
 
             {/* Left Side - Menu Button */}
             <TouchableOpacity
-              style={[styles.iconButton, { backgroundColor: colors.glassBackgroundLight }]}
+              style={[
+                styles.iconButton,
+                {
+                  backgroundColor: isDark ? colors.backgroundSecondary : '#F3F4F6',
+                  borderWidth: 1,
+                  borderColor: isDark ? colors.border : '#E5E7EB',
+                }
+              ]}
               onPress={() => setSidebarVisible(true)}
               activeOpacity={0.7}
             >
@@ -56,7 +74,19 @@ export const Header: React.FC<HeaderProps> = ({
 
             {/* Right Side - User Avatar */}
             <TouchableOpacity
-              style={[styles.iconButton, { backgroundColor: colors.primary }]}
+              style={[
+                styles.iconButton,
+                {
+                  backgroundColor: colors.primary,
+                  borderWidth: 1,
+                  borderColor: isDark ? colors.primaryLight : colors.primaryDark,
+                  shadowColor: colors.primary,
+                  shadowOffset: { width: 0, height: 2 },
+                  shadowOpacity: 0.3,
+                  shadowRadius: 4,
+                  elevation: 3,
+                }
+              ]}
               onPress={() => setSidebarVisible(true)}
               activeOpacity={0.7}
             >
@@ -76,11 +106,6 @@ export const Header: React.FC<HeaderProps> = ({
 
 const styles = StyleSheet.create({
   container: {
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
     borderBottomWidth: 1,
   },
   blurContainer: {

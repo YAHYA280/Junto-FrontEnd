@@ -1,13 +1,17 @@
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import Constants from 'expo-constants';
+
+// Get configuration from expo constants (loaded from .env via app.config.js)
+const expoConfig = Constants.expoConfig?.extra || {};
 
 // API Configuration
 export const API_CONFIG = {
-  BASE_URL: __DEV__ ? 'http://192.168.1.14:4000' :'http://localhost:4000' ,
-  TIMEOUT: 30000,
+  BASE_URL: expoConfig.apiBaseUrl || 'http://localhost:4000',
+  TIMEOUT: expoConfig.apiTimeout || 30000,
   COOKIE_NAMES: {
-    ACCESS_TOKEN: 'jg_at',
-    REFRESH_TOKEN: 'jg_rt',
+    ACCESS_TOKEN: expoConfig.cookieNameAccess || 'jg_at',
+    REFRESH_TOKEN: expoConfig.cookieNameRefresh || 'jg_rt',
   },
 };
 
