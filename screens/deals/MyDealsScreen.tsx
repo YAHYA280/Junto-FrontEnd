@@ -12,8 +12,10 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '../../contexts/ThemeContext';
-import { Card, Header, AnimatedView } from '../../components/ui';
+import { Card, AnimatedView, Sidebar } from '../../components/ui';
 import { useAuthStore } from '../../store/authStore';
 import dealsApi from '../../services/api/deals.api';
 import { HotDeal } from '../../shared/types/deal';
@@ -21,7 +23,7 @@ import { HotDeal } from '../../shared/types/deal';
 const { width } = Dimensions.get('window');
 
 export const MyDealsScreen: React.FC = () => {
-  const { colors } = useTheme();
+  const { colors, isDark } = useTheme();
   const router = useRouter();
   const { user } = useAuthStore();
 
@@ -29,6 +31,7 @@ export const MyDealsScreen: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [sidebarVisible, setSidebarVisible] = useState(false);
 
   const isSeller = user?.roles?.includes('SELLER' as any);
 
@@ -277,10 +280,50 @@ export const MyDealsScreen: React.FC = () => {
     );
   };
 
+  const renderHeader = () => (
+    <View style={[
+      styles.topHeader,
+      {
+        backgroundColor: isDark ? colors.surface : '#FFFFFF',
+        borderBottomColor: isDark ? colors.border : '#E5E7EB',
+      }
+    ]}>
+      {/* Left: Menu Button */}
+      <TouchableOpacity
+        style={[styles.headerButton, { backgroundColor: isDark ? colors.backgroundSecondary : '#F3F4F6' }]}
+        onPress={() => setSidebarVisible(true)}
+        activeOpacity={0.7}
+      >
+        <Ionicons name="menu" size={22} color={colors.text} />
+      </TouchableOpacity>
+
+      {/* Center: Logo */}
+      <View style={styles.logoSection}>
+        <LinearGradient
+          colors={[colors.primary, colors.primaryLight]}
+          style={styles.logoIcon}
+        >
+          <Ionicons name="pricetags" size={18} color="#FFFFFF" />
+        </LinearGradient>
+        <Text style={[styles.logoText, { color: colors.text }]}>My Deals</Text>
+      </View>
+
+      {/* Right: Add Button */}
+      <TouchableOpacity
+        style={[styles.headerButton, { backgroundColor: colors.primary }]}
+        onPress={() => router.push('/deals/create')}
+        activeOpacity={0.7}
+      >
+        <Ionicons name="add" size={22} color="#FFFFFF" />
+      </TouchableOpacity>
+    </View>
+  );
+
   if (!isSeller) {
     return (
-      <View style={[styles.container, { backgroundColor: colors.background }]}>
-        <Header title="My Deals" />
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
+        <Sidebar visible={sidebarVisible} onClose={() => setSidebarVisible(false)} />
+        {renderHeader()}
         <View style={styles.centerContainer}>
           <Ionicons name="lock-closed-outline" size={64} color={colors.textTertiary} />
           <Text style={[styles.emptyTitle, { color: colors.text }]}>
@@ -299,34 +342,14 @@ export const MyDealsScreen: React.FC = () => {
             </Text>
           </TouchableOpacity>
         </View>
-      </View>
+      </SafeAreaView>
     );
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <Header title="My Deals" />
-
-      {deals.length > 0 && (
-        <View style={styles.headerActions}>
-          <TouchableOpacity
-            style={[
-              styles.createDealButton,
-              {
-                backgroundColor: colors.primary,
-                shadowColor: colors.shadow,
-              },
-            ]}
-            onPress={() => router.push('/deals/create')}
-            activeOpacity={0.8}
-          >
-            <Ionicons name="add" size={20} color={colors.textInverse} />
-            <Text style={[styles.createDealButtonText, { color: colors.textInverse }]}>
-              Create New Deal
-            </Text>
-          </TouchableOpacity>
-        </View>
-      )}
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
+      <Sidebar visible={sidebarVisible} onClose={() => setSidebarVisible(false)} />
+      {renderHeader()}
 
       <FlatList
         data={deals}
@@ -347,7 +370,7 @@ export const MyDealsScreen: React.FC = () => {
         }
         showsVerticalScrollIndicator={false}
       />
-    </View>
+    </SafeAreaView>
   );
 };
 
@@ -355,26 +378,41 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  headerActions: {
-    paddingHorizontal: 16,
-    paddingBottom: 12,
-  },
-  createDealButton: {
+
+  // Top Header - Same as HomeScreen
+  topHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    paddingVertical: 14,
-    paddingHorizontal: 20,
-    borderRadius: 12,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 4,
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    gap: 12,
   },
-  createDealButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
+  headerButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  logoSection: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    flex: 1,
+    justifyContent: 'center',
+  },
+  logoIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  logoText: {
+    fontSize: 18,
+    fontWeight: '700',
   },
   listContent: {
     padding: 16,

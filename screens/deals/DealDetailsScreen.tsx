@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import {
   View,
   Text,
@@ -9,6 +9,8 @@ import {
   Alert,
   Dimensions,
   Share,
+  Image,
+  Animated,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -20,7 +22,16 @@ import dealsApi from '../../services/api/deals.api';
 import { HotDeal } from '../../shared/types/deal';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
-const IMAGE_HEIGHT = SCREEN_WIDTH * 0.65;
+const IMAGE_HEIGHT = SCREEN_WIDTH * 0.7;
+
+// Category mapping
+const CATEGORY_INFO: Record<string, { label: string; icon: keyof typeof Ionicons.glyphMap; color: string }> = {
+  food: { label: 'Food & Dining', icon: 'restaurant', color: '#F59E0B' },
+  transport: { label: 'Transport', icon: 'car', color: '#3B82F6' },
+  housing: { label: 'Housing', icon: 'home', color: '#8B5CF6' },
+  shopping: { label: 'Shopping', icon: 'bag', color: '#EC4899' },
+  services: { label: 'Services', icon: 'construct', color: '#14B8A6' },
+};
 
 export const DealDetailsScreen: React.FC = () => {
   const { colors, isDark } = useTheme();
@@ -33,9 +44,60 @@ export const DealDetailsScreen: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isFavorite, setIsFavorite] = useState(false);
+  const [countdown, setCountdown] = useState({ hours: 0, minutes: 0, seconds: 0 });
+  const pulseAnim = useRef(new Animated.Value(1)).current;
 
   const isSeller = user?.roles?.includes('SELLER' as any);
   const isOwner = deal?.sellerId === user?.id;
+
+  // Countdown timer effect
+  useEffect(() => {
+    if (!deal?.expiresAt) return;
+
+    const updateCountdown = () => {
+      const now = new Date();
+      const expiry = new Date(deal.expiresAt!);
+      const diffMs = expiry.getTime() - now.getTime();
+
+      if (diffMs <= 0) {
+        setCountdown({ hours: 0, minutes: 0, seconds: 0 });
+        return;
+      }
+
+      const hours = Math.floor(diffMs / (1000 * 60 * 60));
+      const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+      const seconds = Math.floor((diffMs % (1000 * 60)) / 1000);
+
+      setCountdown({ hours, minutes, seconds });
+    };
+
+    updateCountdown();
+    const interval = setInterval(updateCountdown, 1000);
+
+    return () => clearInterval(interval);
+  }, [deal?.expiresAt]);
+
+  // Pulse animation for urgent deals
+  useEffect(() => {
+    if (countdown.hours <= 24 && countdown.hours > 0) {
+      const pulse = Animated.loop(
+        Animated.sequence([
+          Animated.timing(pulseAnim, {
+            toValue: 1.05,
+            duration: 800,
+            useNativeDriver: true,
+          }),
+          Animated.timing(pulseAnim, {
+            toValue: 1,
+            duration: 800,
+            useNativeDriver: true,
+          }),
+        ])
+      );
+      pulse.start();
+      return () => pulse.stop();
+    }
+  }, [countdown.hours]);
 
   useEffect(() => {
     loadDeal();
@@ -158,6 +220,34 @@ export const DealDetailsScreen: React.FC = () => {
     return null;
   };
 
+  const getCategoryInfo = () => {
+    const category = deal?.hot?.category;
+    if (!category || !CATEGORY_INFO[category]) return null;
+    return CATEGORY_INFO[category];
+  };
+
+  const getAvailabilityPercentage = () => {
+    if (!deal?.quantityTotal) return null;
+    const claimed = deal.quantityClaimed || 0;
+    const total = deal.quantityTotal;
+    const remaining = total - claimed;
+    return {
+      percentage: Math.max(0, Math.min(100, (remaining / total) * 100)),
+      remaining,
+      total,
+    };
+  };
+
+  const formatCountdown = () => {
+    const { hours, minutes, seconds } = countdown;
+    if (hours >= 24) {
+      const days = Math.floor(hours / 24);
+      const remainingHours = hours % 24;
+      return `${days}d ${remainingHours}h ${minutes}m`;
+    }
+    return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+  };
+
   // Loading State
   if (isLoading) {
     return (
@@ -196,6 +286,8 @@ export const DealDetailsScreen: React.FC = () => {
   const discount = calculateDiscount();
   const savings = getSavings();
   const urgency = getUrgencyInfo();
+  const categoryInfo = getCategoryInfo();
+  const availability = getAvailabilityPercentage();
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -203,77 +295,88 @@ export const DealDetailsScreen: React.FC = () => {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
       >
-        {/* Hero Image Section */}
+        {/* Hero Image Section with Gradient Overlay */}
         <View style={[styles.imageSection, { paddingTop: insets.top }]}>
-          <View style={[
-            styles.imagePlaceholder,
-            { backgroundColor: isDark ? colors.surface : '#F3F4F6' }
-          ]}>
-            <Ionicons name="image-outline" size={48} color={colors.textTertiary} />
-            <Text style={[styles.imagePlaceholderText, { color: colors.textTertiary }]}>
-              Deal Image
-            </Text>
-          </View>
+          {deal.imageUrl ? (
+            <Image
+              source={{ uri: deal.imageUrl }}
+              style={styles.heroImage}
+              resizeMode="cover"
+            />
+          ) : (
+            <View style={[
+              styles.imagePlaceholder,
+              { backgroundColor: isDark ? colors.surface : '#F3F4F6' }
+            ]}>
+              <Ionicons name="image-outline" size={48} color={colors.textTertiary} />
+              <Text style={[styles.imagePlaceholderText, { color: colors.textTertiary }]}>
+                Deal Image
+              </Text>
+            </View>
+          )}
+
+          {/* Gradient Overlay */}
+          <LinearGradient
+            colors={['rgba(0,0,0,0.4)', 'transparent', 'rgba(0,0,0,0.6)']}
+            locations={[0, 0.4, 1]}
+            style={styles.imageOverlay}
+          />
 
           {/* Top Actions Row */}
           <View style={[styles.topActions, { top: insets.top + 12 }]}>
             {/* Back Button */}
             <TouchableOpacity
-              style={[
-                styles.actionButton,
-                {
-                  backgroundColor: isDark ? colors.surface : '#FFFFFF',
-                  borderColor: isDark ? colors.border : '#E5E7EB',
-                }
-              ]}
+              style={styles.actionButtonGlass}
               onPress={() => router.back()}
               activeOpacity={0.7}
             >
-              <Ionicons name="arrow-back" size={20} color={colors.text} />
+              <Ionicons name="arrow-back" size={22} color="#FFFFFF" />
             </TouchableOpacity>
 
             {/* Right Actions */}
             <View style={styles.rightActions}>
               <TouchableOpacity
-                style={[
-                  styles.actionButton,
-                  {
-                    backgroundColor: isDark ? colors.surface : '#FFFFFF',
-                    borderColor: isDark ? colors.border : '#E5E7EB',
-                  }
-                ]}
+                style={styles.actionButtonGlass}
                 onPress={handleShare}
                 activeOpacity={0.7}
               >
-                <Ionicons name="share-outline" size={20} color={colors.text} />
+                <Ionicons name="share-outline" size={22} color="#FFFFFF" />
               </TouchableOpacity>
 
               <TouchableOpacity
                 style={[
-                  styles.actionButton,
-                  {
-                    backgroundColor: isFavorite ? colors.error + '15' : (isDark ? colors.surface : '#FFFFFF'),
-                    borderColor: isFavorite ? colors.error : (isDark ? colors.border : '#E5E7EB'),
-                  }
+                  styles.actionButtonGlass,
+                  isFavorite && { backgroundColor: colors.error }
                 ]}
                 onPress={handleFavorite}
                 activeOpacity={0.7}
               >
                 <Ionicons
                   name={isFavorite ? 'heart' : 'heart-outline'}
-                  size={20}
-                  color={isFavorite ? colors.error : colors.text}
+                  size={22}
+                  color="#FFFFFF"
                 />
               </TouchableOpacity>
             </View>
           </View>
 
-          {/* Discount Badge */}
+          {/* Discount Badge - Right side */}
           {discount && discount > 0 && (
-            <View style={[styles.discountBadge, { backgroundColor: colors.error }]}>
-              <Text style={styles.discountText}>-{discount}%</Text>
+            <View style={[styles.discountBadgeLarge, { backgroundColor: colors.error }]}>
+              <Text style={styles.discountTextLarge}>-{discount}%</Text>
+              <Text style={styles.discountLabel}>OFF</Text>
             </View>
           )}
+
+          {/* Bottom Image Info - Category only */}
+          <View style={styles.imageBottomInfo}>
+            {categoryInfo && (
+              <View style={[styles.categoryBadge, { backgroundColor: categoryInfo.color }]}>
+                <Ionicons name={categoryInfo.icon} size={14} color="#FFFFFF" />
+                <Text style={styles.categoryText}>{categoryInfo.label}</Text>
+              </View>
+            )}
+          </View>
         </View>
 
         {/* Content Section */}
@@ -284,75 +387,134 @@ export const DealDetailsScreen: React.FC = () => {
             borderColor: isDark ? colors.border : '#E5E7EB',
           }
         ]}>
-          {/* Top Tags Row */}
-          <View style={styles.tagsRow}>
-            {/* Merchant Tag */}
-            {deal.hot?.merchantName && (
-              <View style={[styles.merchantTag, { backgroundColor: colors.primary + '15' }]}>
-                <Ionicons name="storefront" size={14} color={colors.primary} />
-                <Text style={[styles.merchantName, { color: colors.primary }]}>
-                  {deal.hot.merchantName}
+          {/* Highlight Cards Row - Only Time Left and Items Left */}
+          <View style={styles.highlightsRow}>
+            {/* Countdown Card */}
+            {urgency && countdown.hours >= 0 && (
+              <Animated.View style={[
+                styles.highlightCard,
+                {
+                  backgroundColor: urgency.bg,
+                  borderColor: urgency.color + '30',
+                  transform: [{ scale: countdown.hours <= 24 ? pulseAnim : 1 }],
+                  flex: 1,
+                }
+              ]}>
+                <Ionicons name="time" size={20} color={urgency.color} />
+                <Text style={[styles.highlightValue, { color: urgency.color }]}>
+                  {formatCountdown()}
                 </Text>
-              </View>
+                <Text style={[styles.highlightLabel, { color: urgency.color }]}>
+                  {countdown.hours <= 0 ? 'Expired' : 'Time Left'}
+                </Text>
+              </Animated.View>
             )}
 
-            {/* Urgency Tag */}
-            {urgency && (
-              <View style={[styles.urgencyTag, { backgroundColor: urgency.bg }]}>
-                <Ionicons name="time" size={14} color={urgency.color} />
-                <Text style={[styles.urgencyText, { color: urgency.color }]}>
-                  {urgency.label}
+            {/* Availability Card */}
+            {availability && (
+              <View style={[
+                styles.highlightCard,
+                {
+                  backgroundColor: colors.info + '15',
+                  borderColor: colors.info + '30',
+                  flex: 1,
+                }
+              ]}>
+                <Ionicons name="cube" size={20} color={colors.info} />
+                <Text style={[styles.highlightValue, { color: colors.info }]}>
+                  {availability.remaining}
+                </Text>
+                <Text style={[styles.highlightLabel, { color: colors.info }]}>
+                  Items Left
                 </Text>
               </View>
             )}
           </View>
+
+          {/* Merchant Tag */}
+          {deal.hot?.merchantName && (
+            <View style={[styles.merchantRow, { borderBottomColor: isDark ? colors.border : '#E5E7EB' }]}>
+              <View style={[styles.merchantAvatar, { backgroundColor: colors.primary }]}>
+                <Ionicons name="storefront" size={16} color="#FFFFFF" />
+              </View>
+              <Text style={[styles.merchantName, { color: colors.text }]}>
+                {deal.hot.merchantName}
+              </Text>
+              <View style={[styles.verifiedBadge, { backgroundColor: colors.primary + '15' }]}>
+                <Ionicons name="checkmark-circle" size={14} color={colors.primary} />
+                <Text style={[styles.verifiedText, { color: colors.primary }]}>Verified</Text>
+              </View>
+            </View>
+          )}
 
           {/* Title */}
           <Text style={[styles.title, { color: colors.text }]}>
             {deal.title}
           </Text>
 
-          {/* Price Card */}
+          {/* Price Section - Simplified */}
           <View style={[
-            styles.priceCard,
+            styles.priceSection,
             {
               backgroundColor: isDark ? colors.backgroundSecondary : '#F9FAFB',
               borderColor: isDark ? colors.border : '#E5E7EB',
             }
           ]}>
-            <View style={styles.priceRow}>
+            <View style={styles.priceMain}>
+              <Text style={[styles.dealPriceLarge, { color: colors.primary }]}>
+                {formatPrice(deal.priceDeal)}
+              </Text>
               {deal.priceOriginal && (
-                <View style={styles.priceBox}>
-                  <Text style={[styles.priceLabel, { color: colors.textTertiary }]}>WAS</Text>
-                  <Text style={[styles.originalPrice, { color: colors.textTertiary }]}>
-                    {formatPrice(deal.priceOriginal)}
-                  </Text>
-                </View>
-              )}
-
-              {deal.priceOriginal && (
-                <View style={styles.priceArrow}>
-                  <Ionicons name="arrow-forward" size={20} color={colors.textTertiary} />
-                </View>
-              )}
-
-              <View style={styles.priceBox}>
-                <Text style={[styles.priceLabel, { color: colors.primary }]}>NOW</Text>
-                <Text style={[styles.dealPrice, { color: colors.primary }]}>
-                  {formatPrice(deal.priceDeal)}
+                <Text style={[styles.originalPriceLarge, { color: colors.textTertiary }]}>
+                  {formatPrice(deal.priceOriginal)}
                 </Text>
-              </View>
+              )}
             </View>
 
+            {/* You Save - Below Price */}
             {savings && parseFloat(savings) > 0 && (
-              <View style={[styles.savingsBadge, { backgroundColor: colors.success + '15' }]}>
-                <Ionicons name="trending-down" size={16} color={colors.success} />
+              <View style={[styles.savingsRow, { backgroundColor: colors.success + '15' }]}>
+                <Ionicons name="arrow-down-circle" size={18} color={colors.success} />
                 <Text style={[styles.savingsText, { color: colors.success }]}>
-                  Save {formatPrice(savings)}
+                  You save {formatPrice(savings)}
                 </Text>
               </View>
             )}
           </View>
+
+          {/* Availability Progress Bar */}
+          {availability && (
+            <View style={styles.availabilitySection}>
+              <View style={styles.availabilityHeader}>
+                <Text style={[styles.availabilityTitle, { color: colors.text }]}>
+                  Availability
+                </Text>
+                <Text style={[styles.availabilityCount, { color: colors.textSecondary }]}>
+                  {availability.remaining} of {availability.total} left
+                </Text>
+              </View>
+              <View style={[styles.progressBarBg, { backgroundColor: isDark ? colors.border : '#E5E7EB' }]}>
+                <View
+                  style={[
+                    styles.progressBarFill,
+                    {
+                      width: `${availability.percentage}%`,
+                      backgroundColor: availability.percentage > 50
+                        ? colors.success
+                        : availability.percentage > 20
+                          ? colors.warning
+                          : colors.error,
+                    }
+                  ]}
+                />
+              </View>
+              {availability.percentage <= 20 && (
+                <Text style={[styles.lowStockWarning, { color: colors.error }]}>
+                  Hurry! Almost sold out
+                </Text>
+              )}
+            </View>
+          )}
 
           {/* Divider */}
           <View style={[styles.divider, { backgroundColor: isDark ? colors.border : '#E5E7EB' }]} />
@@ -362,7 +524,7 @@ export const DealDetailsScreen: React.FC = () => {
             <>
               <View style={styles.section}>
                 <Text style={[styles.sectionTitle, { color: colors.text }]}>
-                  About this deal
+                  Description
                 </Text>
                 <Text style={[styles.description, { color: colors.textSecondary }]}>
                   {deal.description}
@@ -372,59 +534,41 @@ export const DealDetailsScreen: React.FC = () => {
             </>
           )}
 
-          {/* Deal Details Grid */}
+          {/* Deal Details - Simplified */}
           <View style={styles.section}>
             <Text style={[styles.sectionTitle, { color: colors.text }]}>
               Deal Details
             </Text>
 
-            <View style={styles.detailsGrid}>
-              <View style={[
-                styles.detailItem,
-                {
-                  backgroundColor: isDark ? colors.backgroundSecondary : '#F9FAFB',
-                  borderColor: isDark ? colors.border : '#E5E7EB',
-                }
-              ]}>
-                <View style={[styles.detailIcon, { backgroundColor: colors.primary + '15' }]}>
-                  <Ionicons name="calendar" size={18} color={colors.primary} />
+            <View style={styles.detailsList}>
+              <View style={styles.detailRow}>
+                <View style={[styles.detailIconSmall, { backgroundColor: colors.primary + '15' }]}>
+                  <Ionicons name="calendar-outline" size={16} color={colors.primary} />
                 </View>
-                <Text style={[styles.detailLabel, { color: colors.textTertiary }]}>Starts</Text>
+                <Text style={[styles.detailLabel, { color: colors.textSecondary }]}>Starts</Text>
                 <Text style={[styles.detailValue, { color: colors.text }]}>
                   {formatDate(deal.startsAt)}
                 </Text>
               </View>
 
-              <View style={[
-                styles.detailItem,
-                {
-                  backgroundColor: isDark ? colors.backgroundSecondary : '#F9FAFB',
-                  borderColor: isDark ? colors.border : '#E5E7EB',
-                }
-              ]}>
-                <View style={[styles.detailIcon, { backgroundColor: colors.warning + '15' }]}>
-                  <Ionicons name="time" size={18} color={colors.warning} />
+              <View style={styles.detailRow}>
+                <View style={[styles.detailIconSmall, { backgroundColor: colors.warning + '15' }]}>
+                  <Ionicons name="alarm-outline" size={16} color={colors.warning} />
                 </View>
-                <Text style={[styles.detailLabel, { color: colors.textTertiary }]}>Expires</Text>
+                <Text style={[styles.detailLabel, { color: colors.textSecondary }]}>Expires</Text>
                 <Text style={[styles.detailValue, { color: colors.text }]}>
                   {formatDate(deal.expiresAt)}
                 </Text>
               </View>
 
-              {deal.quantityTotal && (
-                <View style={[
-                  styles.detailItem,
-                  {
-                    backgroundColor: isDark ? colors.backgroundSecondary : '#F9FAFB',
-                    borderColor: isDark ? colors.border : '#E5E7EB',
-                  }
-                ]}>
-                  <View style={[styles.detailIcon, { backgroundColor: colors.info + '15' }]}>
-                    <Ionicons name="cube" size={18} color={colors.info} />
+              {categoryInfo && (
+                <View style={styles.detailRow}>
+                  <View style={[styles.detailIconSmall, { backgroundColor: categoryInfo.color + '15' }]}>
+                    <Ionicons name={categoryInfo.icon} size={16} color={categoryInfo.color} />
                   </View>
-                  <Text style={[styles.detailLabel, { color: colors.textTertiary }]}>Available</Text>
+                  <Text style={[styles.detailLabel, { color: colors.textSecondary }]}>Category</Text>
                   <Text style={[styles.detailValue, { color: colors.text }]}>
-                    {deal.quantityTotal} left
+                    {categoryInfo.label}
                   </Text>
                 </View>
               )}
@@ -571,6 +715,10 @@ const styles = StyleSheet.create({
     width: '100%',
     height: IMAGE_HEIGHT,
   },
+  heroImage: {
+    width: '100%',
+    height: '100%',
+  },
   imagePlaceholder: {
     flex: 1,
     justifyContent: 'center',
@@ -579,6 +727,13 @@ const styles = StyleSheet.create({
   },
   imagePlaceholderText: {
     fontSize: 14,
+  },
+  imageOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
   },
   topActions: {
     position: 'absolute',
@@ -591,33 +746,53 @@ const styles = StyleSheet.create({
   },
   rightActions: {
     flexDirection: 'row',
-    gap: 8,
+    gap: 10,
   },
-  actionButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
+  actionButtonGlass: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 1,
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    backgroundColor: 'rgba(0,0,0,0.3)',
   },
-  discountBadge: {
+  imageBottomInfo: {
     position: 'absolute',
     bottom: 40,
-    right: 16,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 12,
+    left: 16,
   },
-  discountText: {
+  categoryBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 20,
+    gap: 6,
+  },
+  categoryText: {
     color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '700',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  discountBadgeLarge: {
+    position: 'absolute',
+    right: 16,
+    bottom: 40,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 14,
+    alignItems: 'center',
+    zIndex: 10,
+  },
+  discountTextLarge: {
+    color: '#FFFFFF',
+    fontSize: 20,
+    fontWeight: '800',
+  },
+  discountLabel: {
+    color: 'rgba(255,255,255,0.8)',
+    fontSize: 10,
+    fontWeight: '600',
   },
 
   // Content Section
@@ -626,94 +801,144 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     paddingHorizontal: 20,
-    paddingTop: 24,
+    paddingTop: 20,
     paddingBottom: 16,
     borderWidth: 1,
     borderBottomWidth: 0,
   },
-  tagsRow: {
+
+  // Highlight Cards
+  highlightsRow: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-    marginBottom: 12,
+    gap: 12,
+    marginBottom: 16,
   },
-  merchantTag: {
+  highlightCard: {
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderRadius: 14,
+    borderWidth: 1,
+    alignItems: 'center',
+  },
+  highlightValue: {
+    fontSize: 18,
+    fontWeight: '800',
+    marginTop: 6,
+  },
+  highlightLabel: {
+    fontSize: 11,
+    fontWeight: '600',
+    marginTop: 2,
+    textTransform: 'uppercase',
+  },
+
+  // Merchant Row
+  merchantRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
-    gap: 6,
+    paddingBottom: 16,
+    marginBottom: 12,
+    borderBottomWidth: 1,
+    gap: 10,
+  },
+  merchantAvatar: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   merchantName: {
-    fontSize: 13,
+    flex: 1,
+    fontSize: 15,
     fontWeight: '600',
   },
-  urgencyTag: {
+  verifiedBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
-    gap: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    gap: 4,
   },
-  urgencyText: {
-    fontSize: 13,
+  verifiedText: {
+    fontSize: 11,
     fontWeight: '600',
   },
+
   title: {
-    fontSize: 22,
+    fontSize: 24,
     fontWeight: '700',
-    lineHeight: 30,
+    lineHeight: 32,
     marginBottom: 16,
   },
 
-  // Price Card
-  priceCard: {
-    padding: 20,
+  // Price Section
+  priceSection: {
+    padding: 16,
     borderRadius: 16,
     borderWidth: 1,
-    marginBottom: 8,
+    marginBottom: 16,
   },
-  priceRow: {
+  priceMain: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'baseline',
+    gap: 12,
   },
-  priceBox: {
-    alignItems: 'flex-start',
+  dealPriceLarge: {
+    fontSize: 36,
+    fontWeight: '800',
   },
-  priceLabel: {
-    fontSize: 11,
-    fontWeight: '600',
-    letterSpacing: 0.5,
-    marginBottom: 4,
-  },
-  priceArrow: {
-    paddingHorizontal: 16,
-    paddingTop: 16,
-  },
-  originalPrice: {
-    fontSize: 16,
+  originalPriceLarge: {
+    fontSize: 18,
     fontWeight: '500',
     textDecorationLine: 'line-through',
   },
-  dealPrice: {
-    fontSize: 32,
-    fontWeight: '800',
-  },
-  savingsBadge: {
+  savingsRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 8,
+    marginTop: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 10,
     alignSelf: 'flex-start',
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderRadius: 12,
-    gap: 6,
-    marginTop: 16,
   },
   savingsText: {
     fontSize: 14,
     fontWeight: '600',
+  },
+
+  // Availability Section
+  availabilitySection: {
+    marginBottom: 8,
+  },
+  availabilityHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  availabilityTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  availabilityCount: {
+    fontSize: 13,
+  },
+  progressBarBg: {
+    height: 8,
+    borderRadius: 4,
+    overflow: 'hidden',
+  },
+  progressBarFill: {
+    height: '100%',
+    borderRadius: 4,
+  },
+  lowStockWarning: {
+    fontSize: 12,
+    fontWeight: '600',
+    marginTop: 6,
   },
 
   // Divider
@@ -724,7 +949,7 @@ const styles = StyleSheet.create({
 
   // Section
   section: {
-    marginTop: 20,
+    marginTop: 4,
   },
   sectionTitle: {
     fontSize: 16,
@@ -736,37 +961,29 @@ const styles = StyleSheet.create({
     lineHeight: 24,
   },
 
-  // Details Grid
-  detailsGrid: {
+  // Details List
+  detailsList: {
+    gap: 12,
+  },
+  detailRow: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
-  },
-  detailItem: {
-    flex: 1,
-    minWidth: '30%',
-    padding: 14,
-    borderRadius: 12,
-    borderWidth: 1,
     alignItems: 'center',
-    gap: 8,
+    gap: 12,
   },
-  detailIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
+  detailIconSmall: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
     justifyContent: 'center',
     alignItems: 'center',
   },
   detailLabel: {
-    fontSize: 11,
-    fontWeight: '500',
-    textTransform: 'uppercase',
+    flex: 1,
+    fontSize: 14,
   },
   detailValue: {
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: '600',
-    textAlign: 'center',
   },
 
   // Redemption Card

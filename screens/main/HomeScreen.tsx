@@ -63,91 +63,6 @@ const TIME_FILTERS: TimeFilterItem[] = [
   { id: '72h', label: '72h', hours: 72, color: '#22C55E', bgColor: '#22C55E15' },
 ];
 
-// Mock data with images for testing
-const MOCK_DEALS: HotDeal[] = [
-  {
-    id: 'mock-1',
-    title: '50% Off Gourmet Burger Meal',
-    description: 'Enjoy our signature burger with fries and a drink at half price',
-    priceOriginal: '120.00',
-    priceDeal: '60.00',
-    currency: 'MAD',
-    startsAt: new Date().toISOString(),
-    expiresAt: new Date(Date.now() + 18 * 60 * 60 * 1000).toISOString(), // 18h from now
-    imageUrl: 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=400',
-    hot: { merchantName: 'Burger House', category: 'food' },
-    sellerId: 'seller-1',
-  },
-  {
-    id: 'mock-2',
-    title: 'Luxury Car Rental - Weekend Special',
-    description: 'Rent a Mercedes C-Class for the weekend at an amazing price',
-    priceOriginal: '1500.00',
-    priceDeal: '900.00',
-    currency: 'MAD',
-    startsAt: new Date().toISOString(),
-    expiresAt: new Date(Date.now() + 36 * 60 * 60 * 1000).toISOString(), // 36h from now
-    imageUrl: 'https://images.unsplash.com/photo-1617469767053-d3b523a0b982?w=400',
-    hot: { merchantName: 'Premium Cars', category: 'transport' },
-    sellerId: 'seller-2',
-  },
-  {
-    id: 'mock-3',
-    title: 'Cozy Airbnb Studio - Marrakech',
-    description: 'Beautiful studio apartment in the heart of Marrakech medina',
-    priceOriginal: '800.00',
-    priceDeal: '450.00',
-    currency: 'MAD',
-    startsAt: new Date().toISOString(),
-    expiresAt: new Date(Date.now() + 60 * 60 * 60 * 1000).toISOString(), // 60h from now
-    imageUrl: 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=400',
-    hot: { merchantName: 'Riad Stays', category: 'housing' },
-    sellerId: 'seller-3',
-  },
-  {
-    id: 'mock-4',
-    title: 'Italian Restaurant - Family Dinner',
-    description: 'Full Italian dinner for 4 people with appetizers and dessert',
-    priceOriginal: '450.00',
-    priceDeal: '280.00',
-    currency: 'MAD',
-    startsAt: new Date().toISOString(),
-    expiresAt: new Date(Date.now() + 12 * 60 * 60 * 1000).toISOString(), // 12h from now
-    imageUrl: 'https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=400',
-    hot: { merchantName: 'La Piazza', category: 'food' },
-    sellerId: 'seller-4',
-  },
-  {
-    id: 'mock-5',
-    title: 'Spa Day Package',
-    description: 'Full day spa access with massage and facial treatment',
-    priceOriginal: '600.00',
-    priceDeal: '350.00',
-    currency: 'MAD',
-    startsAt: new Date().toISOString(),
-    expiresAt: new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString(), // 48h from now
-    imageUrl: 'https://images.unsplash.com/photo-1544161515-4ab6ce6db874?w=400',
-    hot: { merchantName: 'Zen Spa', category: 'services' },
-    sellerId: 'seller-5',
-  },
-  {
-    id: 'mock-6',
-    title: 'Designer Sunglasses Sale',
-    description: 'Authentic Ray-Ban and Oakley sunglasses at 40% off',
-    priceOriginal: '1200.00',
-    priceDeal: '720.00',
-    currency: 'MAD',
-    startsAt: new Date().toISOString(),
-    expiresAt: new Date(Date.now() + 72 * 60 * 60 * 1000).toISOString(), // 72h from now
-    imageUrl: 'https://images.unsplash.com/photo-1572635196237-14b3f281503f?w=400',
-    hot: { merchantName: 'Optic Store', category: 'shopping' },
-    sellerId: 'seller-6',
-  },
-];
-
-// Toggle this to use mock data
-const USE_MOCK_DATA = true;
-
 type ViewMode = 'list' | 'grid';
 
 export const HomeScreen: React.FC = () => {
@@ -188,30 +103,21 @@ export const HomeScreen: React.FC = () => {
     }
 
     try {
-      // Use mock data if enabled
-      if (USE_MOCK_DATA) {
-        // Simulate network delay
-        await new Promise(resolve => setTimeout(resolve, 500));
-        setDeals(MOCK_DEALS);
-        setHasMore(false);
-        setError(null);
+      const response = await dealsApi.listHotDeals({
+        skip: refresh ? 0 : skip,
+        take: TAKE,
+      });
+
+      if (refresh) {
+        setDeals(response.deals);
+        setSkip(TAKE);
       } else {
-        const response = await dealsApi.listHotDeals({
-          skip: refresh ? 0 : skip,
-          take: TAKE,
-        });
-
-        if (refresh) {
-          setDeals(response.deals);
-          setSkip(TAKE);
-        } else {
-          setDeals((prev) => [...prev, ...response.deals]);
-          setSkip((prev) => prev + TAKE);
-        }
-
-        setHasMore(response.deals.length === TAKE);
-        setError(null);
+        setDeals((prev) => [...prev, ...response.deals]);
+        setSkip((prev) => prev + TAKE);
       }
+
+      setHasMore(response.deals.length === TAKE);
+      setError(null);
     } catch (error: any) {
       console.error('[HomeScreen] Error loading deals:', error);
       setError(error.message || 'Failed to load deals');
@@ -559,12 +465,14 @@ export const HomeScreen: React.FC = () => {
           {
             backgroundColor: isDark ? colors.surface : '#FFFFFF',
             borderColor: isDark ? colors.border : '#E5E7EB',
+            borderLeftColor: urgency !== 'normal' ? urgencyColors.bg : (isDark ? colors.border : '#E5E7EB'),
+            borderLeftWidth: urgency !== 'normal' ? 4 : 1,
           }
         ]}
         activeOpacity={0.8}
         onPress={() => router.push(`/deals/${item.id}`)}
       >
-        {/* Image Section */}
+        {/* Image Section - 30% width, full height */}
         <View style={styles.listImageContainer}>
           {item.imageUrl ? (
             <Image
@@ -586,11 +494,6 @@ export const HomeScreen: React.FC = () => {
             <View style={[styles.listDiscountBadge, { backgroundColor: colors.error }]}>
               <Text style={styles.listDiscountText}>-{discount}%</Text>
             </View>
-          )}
-
-          {/* Urgency Indicator Bar */}
-          {urgency !== 'normal' && (
-            <View style={[styles.urgencyBar, { backgroundColor: urgencyColors.bg }]} />
           )}
         </View>
 
@@ -1197,6 +1100,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     borderWidth: 1,
     overflow: 'hidden',
+    height: 140,
     shadowColor: '#000000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.08,
@@ -1205,8 +1109,8 @@ const styles = StyleSheet.create({
   },
   listImageContainer: {
     position: 'relative',
-    width: 110,
-    height: 130,
+    width: '30%',
+    height: '100%',
   },
   listImage: {
     width: '100%',
@@ -1230,13 +1134,6 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 10,
     fontWeight: '700',
-  },
-  urgencyBar: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    height: 3,
   },
   listContent: {
     flex: 1,
