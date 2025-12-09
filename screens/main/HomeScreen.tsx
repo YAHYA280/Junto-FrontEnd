@@ -398,12 +398,6 @@ export const HomeScreen: React.FC = () => {
               </View>
             )}
 
-            {/* Overlay Gradient */}
-            <LinearGradient
-              colors={['transparent', 'rgba(0,0,0,0.4)']}
-              style={styles.gridImageOverlay}
-            />
-
             {/* Urgency Badge */}
             {urgency !== 'normal' && (
               <View style={[styles.urgencyBadge, { backgroundColor: urgencyColors.bg }]}>
@@ -420,13 +414,6 @@ export const HomeScreen: React.FC = () => {
                 <Text style={styles.discountText}>-{discount}%</Text>
               </View>
             )}
-
-            {/* Price on Image */}
-            <View style={styles.gridPriceOnImage}>
-              <Text style={styles.gridDealPriceOnImage}>
-                {formatPrice(item.priceDeal, item.currency)}
-              </Text>
-            </View>
           </View>
 
           {/* Content */}
@@ -441,17 +428,22 @@ export const HomeScreen: React.FC = () => {
               </View>
             )}
 
+            {/* Price Row - Above Title */}
+            <View style={styles.gridPriceRow}>
+              <Text style={[styles.gridDealPrice, { color: colors.primary }]}>
+                {formatPrice(item.priceDeal, item.currency)}
+              </Text>
+              {item.priceOriginal && (
+                <Text style={[styles.gridOriginalPrice, { color: colors.textTertiary }]}>
+                  {formatPrice(item.priceOriginal, item.currency)}
+                </Text>
+              )}
+            </View>
+
             {/* Title */}
             <Text style={[styles.gridTitle, { color: colors.text }]} numberOfLines={2}>
               {item.title}
             </Text>
-
-            {/* Original Price */}
-            {item.priceOriginal && (
-              <Text style={[styles.gridOriginalPrice, { color: colors.textTertiary }]}>
-                Was {formatPrice(item.priceOriginal, item.currency)}
-              </Text>
-            )}
           </View>
         </TouchableOpacity>
       );
@@ -1045,17 +1037,26 @@ const styles = StyleSheet.create({
   gridContent: {
     padding: 12,
   },
-  gridTitle: {
-    fontSize: 13,
-    fontWeight: '600',
-    lineHeight: 18,
+  gridPriceRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
     marginTop: 6,
     marginBottom: 4,
-    minHeight: 36,
+  },
+  gridDealPrice: {
+    fontSize: 16,
+    fontWeight: '700',
   },
   gridOriginalPrice: {
-    fontSize: 11,
+    fontSize: 12,
     textDecorationLine: 'line-through',
+  },
+  gridTitle: {
+    fontSize: 13,
+    fontWeight: '500',
+    lineHeight: 18,
+    minHeight: 36,
   },
 
   // Urgency Badge
